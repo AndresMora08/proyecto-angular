@@ -1,4 +1,3 @@
-// src/app/pages/entity-management/entity-management.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EntityService } from '../../../services/entity/entity.service';
@@ -9,7 +8,6 @@ import { Entity } from '../../../models/Entity';
 import { TableAction, TableActionEvent } from '../../../models/components/Table';
 import { FormField } from '../../../models/components/Form';
 
-// IMPORTAMOS SWEETALERT2
 import Swal from 'sweetalert2';
 
 @Component({
@@ -20,10 +18,7 @@ import Swal from 'sweetalert2';
   styleUrl: './entity-management.component.css'
 })
 export class EntityManagementComponent implements OnInit {
-  // 'list' muestra solo la tabla. 'create' o 'edit' despliegan el formulario lateral derecho en paralelo.
   viewMode: 'list' | 'create' | 'edit' = 'list';
-
-  // 💡 TESTIGO DE MEMORIA: Almacena la fila completa seleccionada en la tabla para no perder el ID
   activeRowEntity: Entity | null = null;
 
   entities: Entity[] = [];
@@ -63,13 +58,22 @@ export class EntityManagementComponent implements OnInit {
     this.loadEntities();
   }
 
- loadEntities(): void {
+  loadEntities(): void {
     this.entityService.getAll().subscribe({
       next: (data) => {
-        // 👇 Imprime directamente el arreglo exacto enviado por el backend
-        console.log(data);
+        console.log("Datos puros devueltos por el Backend:", data); 
 
-        this.entities = data;
+        this.entities = data.map((entity: any) => {
+          const currentLogoValue = entity.logo_url || entity.logo || '';
+          const resolveDescription = entity.description || entity.desc || 'Sin descripción';
+
+          return {
+            ...entity,
+            description: resolveDescription,
+            logo_url: this.entityService.getLogoUrl(currentLogoValue),
+            logo: this.entityService.getLogoUrl(currentLogoValue) 
+          };
+        });
       },
       error: (err) => {
         console.error('Error al cargar entidades:', err);
@@ -111,7 +115,6 @@ export class EntityManagementComponent implements OnInit {
     const entityItem = event.item as Entity;
 
     if (event.actionName === 'edit') {
-      // Guardamos una copia exacta de la fila a la que se le dio clic
       this.activeRowEntity = entityItem; 
       this.selectedEntity = { ...entityItem };
       this.viewMode = 'edit';
@@ -128,8 +131,6 @@ export class EntityManagementComponent implements OnInit {
         cancelButtonText: 'Cancelar'
       }).then((result) => {
         if (result.isConfirmed) {
-          
-          // Búsqueda inteligente de ID para la desactivación si no viene explícito
           let id = entityItem.id;
           if (!id) {
             const original = this.entities.find(e => e.nit === entityItem.nit || e.name === entityItem.name);
@@ -138,7 +139,6 @@ export class EntityManagementComponent implements OnInit {
 
           if (id) {
             const updatedEntity: Entity = { ...entityItem, status: 'inactive' };
-            
             this.entityService.update(id, updatedEntity).subscribe({
               next: () => {
                 this.loadEntities();
@@ -150,22 +150,7 @@ export class EntityManagementComponent implements OnInit {
                   showConfirmButton: false
                 });
               },
-              error: (err) => {
-                console.error(err);
-                Swal.fire({
-                  icon: 'error',
-                  title: 'Error operacional',
-                  text: 'No se pudo actualizar el estado de la entidad.',
-                  confirmButtonColor: '#2563eb'
-                });
-              }
-            });
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error de Identificador',
-              text: 'No se pudo localizar el ID original de este registro.',
-              confirmButtonColor: '#2563eb'
+              error: (err) => console.error(err)
             });
           }
         }
@@ -174,6 +159,9 @@ export class EntityManagementComponent implements OnInit {
   }
 
   handleFormSubmit(formData: Record<string, any>): void {
+    console.log('➡️ handleFormSubmit detectado correctamente desde el HTML.');
+    console.log('Datos interceptados del Formulario:', formData);
+
     const entityPayload = formData as Entity;
 
     if (this.viewMode === 'create') {
@@ -183,7 +171,7 @@ export class EntityManagementComponent implements OnInit {
           Swal.fire({
             icon: 'success',
             title: '¡Registro Exitoso!',
-            text: 'La nueva organización fue guardada en el sistema de manera correcta.',
+            text: 'La nueva organización fue guardada en el sistema.',
             timer: 2500,
             showConfirmButton: false
           });
@@ -200,40 +188,26 @@ export class EntityManagementComponent implements OnInit {
       });
     } 
     else if (this.viewMode === 'edit') {
-      // 💡 ESTRATEGIA DE BÚSQUEDA CRUZADA (RESOLUCIÓN DE ID):
+      // Búsqueda inteligente del identificador (ID)
+      let id = this.activeRowEntity?.id || (this.activeRowEntity as any)?.id_entity || (this.activeRowEntity as any)?.entity_id;
       
-      // Intentamos extraer el ID directo del item seleccionado en la tabla
-      let id = this.activeRowEntity?.id;
-      
-      // Si la fila carece de ID, buscamos en el listado maestro de la API comparando el NIT o el Nombre original
       if (!id && this.activeRowEntity) {
         const matchOriginal = this.entities.find(e => 
-          e.nit === this.activeRowEntity!.nit || 
-          e.name === this.activeRowEntity!.name
+          String(e.nit).trim() === String(this.activeRowEntity!.nit).trim() || 
+          String(e.name).trim().toLowerCase() === String(this.activeRowEntity!.name).trim().toLowerCase()
         );
-        id = matchOriginal?.id;
+        id = matchOriginal?.id || (matchOriginal as any)?.id_entity;
       }
 
-      // Si tu backend maneja variantes de nombres de columnas (ej: id_entity, entity_id)
-      if (!id && this.activeRowEntity) {
-        const cualquierObjeto = this.activeRowEntity as any;
-        id = cualquierObjeto.id_entity || cualquierObjeto.entity_id || cualquierObjeto.idEntity;
-      }
+      console.log('ID resuelto para enviar a la API de Flask:', id);
 
-      // Si logramos resolver el identificador por cualquiera de las 3 vías anteriores, procesamos la petición HTTP
       if (id) {
         this.entityService.update(id, entityPayload).subscribe({
           next: () => {
-            // 1. Cerramos inmediatamente la ventana lateral del formulario
             this.viewMode = 'list';
-            
-            // 2. Liberamos el testigo de la fila activa de la memoria
             this.activeRowEntity = null;
-            
-            // 3. Recargamos la tabla con la lista actualizada desde Flask
             this.loadEntities();
             
-            // 4. Disparamos la alerta de SweetAlert2 con el check verde de éxito
             Swal.fire({
               icon: 'success',
               title: '¡Actualización Exitosa!',
@@ -247,19 +221,18 @@ export class EntityManagementComponent implements OnInit {
             Swal.fire({
               icon: 'error',
               title: 'Error de actualización',
-              text: 'Ocurrió un problema al sincronizar los nuevos datos con el servidor.',
+              text: 'Ocurrió un problema al sincronizar los nuevos datos.',
               confirmButtonColor: '#2563eb'
             });
           }
         });
       } else {
-        // En caso extremo de que no encuentre coincidencias, imprime el objeto en consola para inspeccionarlo
-        console.error('Estructura de la fila capturada sin ID identificable:', this.activeRowEntity);
+        console.error('Error: El ID se resolvió como undefined.');
         Swal.fire({
           icon: 'error',
-          title: 'Error de consistencia',
-          text: `No se localizó el ID de "${this.activeRowEntity?.name}". Comprueba los nombres de columna en los datos devueltos por tu backend.`,
-          confirmButtonColor: '#2563eb'
+          title: 'Error de Identificador',
+          text: 'No se pudo encontrar el ID correspondiente a este registro para realizar la edición.',
+          confirmButtonColor: '#dc2626'
         });
       }
     }

@@ -58,11 +58,13 @@
             Completa la información de la entidad.
           </p>
           
-          <app-generic-form
+<app-generic-form
             [fields]="formFields"
             [initialValues]="selectedEntity"
             [buttonLabel]="viewMode === 'create' ? 'Guardar entidad' : 'Actualizar entidad'"
+            (formSubmit)="handleFormSubmit($event)"
             (onSubmit)="handleFormSubmit($event)"
+            (cancel)="backToList()"
           ></app-generic-form>
         </div>
 

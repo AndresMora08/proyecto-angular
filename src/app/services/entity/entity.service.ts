@@ -40,15 +40,25 @@ export class EntityService {
     return this.http.delete<void>(`${this.url}/${id}`);
   }
 
+  getLogoUrl(logoName: string): string {
+    const fileName = logoName ? logoName.split('/').pop() : 'default.png';
+    return `${environment.apiUrl}/images/logos/${fileName}`;
+  }
+
   private toFormData(entity: Entity): FormData {
     const fd = new FormData();
     fd.append('name', entity.name);
     fd.append('nit', entity.nit);
-    fd.append('phone', entity.phone);
+    
+    // 💡 SOLUCIÓN 1: Ahora enviamos la descripción al backend para que no se pierda al guardar/editar
+    fd.append('description', entity.description || ''); 
+    
+    fd.append('phone', entity.phone || '');
     fd.append('email', entity.email);
     fd.append('address', entity.address);
-    fd.append('logo_url', entity.logo_url);
+    fd.append('logo_url', entity.logo_url || '');
     fd.append('status', entity.status);
+    
     if (entity.file) {
       fd.append('file', entity.file);
     }
