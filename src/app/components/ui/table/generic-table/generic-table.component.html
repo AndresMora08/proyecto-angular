@@ -6,30 +6,50 @@
         <tr class="bg-gray-2 text-left dark:bg-meta-4">
           @for (col of columns; track col; let index = $index) {
             <th 
-              [ngClass]="index === 0 ? 'min-w-[220px] xl:pl-11' : 'min-w-[150px]'"
-              class="py-4 px-4 font-medium text-black dark:text-white"
+              [ngClass]="index === 0 ? 'min-w-[120px] xl:pl-11' : 'min-w-[150px]'"
+              class="py-4 px-4 font-medium text-black dark:text-white capitalize"
             >
               {{ col }}
             </th>
           }
           <th class="py-4 px-4 font-medium text-black dark:text-white">
-            Actions
+            Acciones
           </th>
         </tr>
       </thead>
 
       <tbody>
         @for (item of data; track index; let index = $index) {
-          <tr>
+          <tr class="hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
             
             @for (col of columns; track col; let colIndex = $index) {
               <td 
                 [ngClass]="colIndex === 0 ? 'pl-9 xl:pl-11' : ''"
                 class="border-b border-[#eee] py-5 px-4 dark:border-strokedark"
               >
-                <p class="text-black dark:text-white">
-                  {{ item[col] }}
-                </p>
+                
+                @if (col === 'logo') {
+                  <div class="flex items-center h-11 w-11 rounded-full overflow-hidden border border-stroke bg-gray-100 dark:border-strokedark dark:bg-meta-4 shadow-sm">
+                    @if (item['logo_url']) {
+                      <img 
+                        [src]="item['logo_url']" 
+                        alt="Logo Oficial" 
+                        class="h-full w-full object-cover"
+                      />
+                    } @else {
+                      <svg class="w-6 h-6 mx-auto text-gray-400 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                      </svg>
+                    }
+                  </div>
+                }
+                
+                @else {
+                  <p class="text-black dark:text-white">
+                    {{ item[col] }}
+                  </p>
+                }
+
               </td>
             }
 
@@ -40,12 +60,8 @@
                   <button
                     (click)="handleAction($event, action.name, item)"
                     type="button"
-                    [ngClass]="{
-                      'text-red-500 hover:bg-red-100': action.name === 'delete',
-                      'text-blue-500 hover:bg-blue-100': action.name === 'view',
-                      'text-green-500 hover:bg-green-100': action.name === 'download'
-                    }"
-                    class="rounded-md border border-stroke px-2 py-1 text-xs font-medium transition hover:bg-gray-2 dark:border-strokedark"
+                    [className]="action.customClass || 'text-blue-500 hover:bg-blue-50 border-blue-200'"
+                    class="rounded-md border px-3 py-1.5 text-xs font-medium transition hover:shadow-sm"
                   >
                     {{ action.label }}
                   </button>

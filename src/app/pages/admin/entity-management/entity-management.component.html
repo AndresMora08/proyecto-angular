@@ -1,1 +1,73 @@
-<p>entity-management works!</p>
+<div class="p-6 bg-gray-50 dark:bg-black min-h-screen">
+  
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <div [ngClass]="viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'" class="space-y-6 transition-all duration-300">
+      
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 bg-white dark:bg-boxdark p-4 rounded-sm border border-stroke dark:border-strokedark shadow-default">
+        <div class="w-full sm:max-w-md">
+          <app-generic-search 
+            label="Entidades registradas"
+            placeholder="Buscar por nombre..."
+            [(value)]="searchTerm"
+          ></app-generic-search>
+        </div>
+        
+        <button 
+          type="button" 
+          (click)="showCreateForm()"
+          class="inline-flex items-center justify-center gap-2 rounded bg-blue-600 py-2.5 px-5 font-semibold text-white hover:bg-blue-700 transition shadow-sm whitespace-nowrap"
+        >
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Nueva entidad
+        </button>
+      </div>
+
+      <div class="bg-white dark:bg-boxdark rounded-sm shadow-default">
+        <app-generic-table 
+          [columns]="tableColumns" 
+          [data]="filteredEntities" 
+          [actions]="tableActions"
+          (onAction)="handleTableAction($event)"
+        ></app-generic-table>
+      </div>
+    </div>
+
+    @if (viewMode !== 'list') {
+      <div class="lg:col-span-4 bg-white dark:bg-boxdark rounded-sm border border-stroke dark:border-strokedark shadow-default transition-all duration-300">
+        
+        <div class="flex items-center justify-between border-b border-stroke dark:border-strokedark py-4 px-6">
+          <h2 class="text-lg font-semibold text-black dark:text-white">
+            {{ viewMode === 'create' ? 'Nueva entidad' : 'Modificar entidad' }}
+          </h2>
+          <button 
+            type="button" 
+            (click)="backToList()" 
+            class="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Completa la información de la entidad.
+          </p>
+          
+          <app-generic-form
+            [fields]="formFields"
+            [initialValues]="selectedEntity"
+            [buttonLabel]="viewMode === 'create' ? 'Guardar entidad' : 'Actualizar entidad'"
+            (onSubmit)="handleFormSubmit($event)"
+          ></app-generic-form>
+        </div>
+
+      </div>
+    }
+
+  </div>
+</div>

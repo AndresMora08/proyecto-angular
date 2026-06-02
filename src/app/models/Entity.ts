@@ -1,6 +1,7 @@
 export interface Entity {
   id?: number;
   name: string;
+  description?: string;
   nit: string;
   phone: string;
   email: string;
