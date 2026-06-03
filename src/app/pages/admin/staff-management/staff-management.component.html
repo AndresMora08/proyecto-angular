@@ -1,0 +1,18 @@
+<div class="p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-semibold">Gestión de Funcionarios</h2>
+    <button class="btn btn-primary" (click)="showCreate()">Crear Funcionario</button>
+  </div>
+
+  <div *ngIf="viewMode === 'list'">
+    <app-generic-search [(value)]="" (search)="loadFuncionarios()"></app-generic-search>
+    <app-generic-table [columns]="tableColumns" [rows]="funcionarios" (action)="handleTableAction($event)"></app-generic-table>
+  </div>
+
+  <div *ngIf="viewMode === 'create' || viewMode === 'edit'">
+    <app-generic-form [fields]="formFields" [initialValue]="selected" (submit)="handleFormSubmit($event)"></app-generic-form>
+    <div class="mt-3">
+      <button class="btn" (click)="backToList()">Volver</button>
+    </div>
+  </div>
+</div>

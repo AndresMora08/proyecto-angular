@@ -20,6 +20,8 @@ import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
 // 1. IMPORTAMOS NUESTRA PÁGINA DE ADMINISTRACIÓN DE ENTIDADES
 import { EntityManagementComponent } from './pages/admin/entity-management/entity-management.component';
+import { StaffManagementComponent } from './pages/admin/staff-management/staff-management.component';
+import { CitizenManagementComponent } from './pages/admin/citizen-management/citizen-management.component';
 
 export const routes: Routes = [
   {
@@ -63,6 +65,16 @@ export const routes: Routes = [
         path: 'entities',
         component: EntityManagementComponent,
         title: 'Administración de Entidades | TailAdmin - Angular Admin Dashboard Template'
+      },
+      {
+        path: 'staff',
+        component: StaffManagementComponent,
+        title: 'Gestión de Funcionarios | Territorial'
+      },
+      {
+        path: 'citizens',
+        component: CitizenManagementComponent,
+        title: 'Gestión de Ciudadanos | Territorial'
       },
       // support tickets
       {
