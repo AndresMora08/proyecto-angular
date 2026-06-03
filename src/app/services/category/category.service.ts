@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators'; // 💡 Importamos map para transformar los datos en el servicio
 import { environment } from '../environments/environment';
 import { Category } from '../../models/Category';
 
@@ -10,8 +11,26 @@ export class CategoryService {
 
   constructor(private http: HttpClient) {}
 
+  // 💡 NUEVO: Método para obtener la URL base limpia para las imágenes
+  private getBaseImageUrl(): string {
+    return environment.apiUrl.replace('/api', '') + '/api/images/';
+  }
+
+  // 💡 CORREGIDO: El servicio ahora transforma la respuesta para incluir la URL completa del logo
   getAll(): Observable<Category[]> {
-    return this.http.get<Category[]>(this.url);
+    const baseImgUrl = this.getBaseImageUrl();
+    return this.http.get<Category[]>(this.url).pipe(
+      map((categories: any[]) => {
+        return categories.map(cat => {
+          const relativePath = cat.image_url || 'categories/default.png';
+          return {
+            ...cat,
+            id: cat.id_category, // Aseguramos compatibilidad de IDs
+            logo: `${baseImgUrl}${relativePath}` // 💡 La URL del logo se resuelve AQUÍ
+          };
+        });
+      })
+    );
   }
 
   getPaginated(page: number, pageSize: number): Observable<any> {
@@ -45,7 +64,7 @@ export class CategoryService {
     fd.append('id_parent_category', String(category.id_parent_category));
     fd.append('name', category.name);
     fd.append('description', category.description);
-    fd.append('image_url', category.image_url);
+    fd.append('image_url', category.image_url || 'categories/default.png');
     fd.append('status', category.status);
     if (category.file) {
       fd.append('file', category.file);
