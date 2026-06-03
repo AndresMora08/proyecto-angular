@@ -18,7 +18,7 @@ import { VideosComponent } from './pages/ui-elements/videos/videos.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
-
+import { ReportChatComponent } from './pages/reports/report-chat/report-chat.component';
 // 1. IMPORTAMOS NUESTRA PÁGINA DE ADMINISTRACIÓN DE ENTIDADES Y CATEGORÍAS
 import { EntityManagementComponent } from './pages/admin/entity-management/entity-management.component';
 import { CategoryManagementComponent } from './pages/admin/category-management/category-management.component';
@@ -130,6 +130,11 @@ export const routes: Routes = [
         component: VideosComponent,
         title: 'Angular Videos Dashboard | TailAdmin - Angular Admin Dashboard Template'
       },
+        {
+  path: 'reports',
+  component: ReportChatComponent,
+  title: 'Reportes Inteligentes'
+}
     ]
   },
   // auth pages
@@ -149,4 +154,6 @@ export const routes: Routes = [
     component: NotFoundComponent,
     title: 'Angular NotFound Dashboard | TailAdmin - Angular Admin Dashboard Template'
   },
+
+
 ];

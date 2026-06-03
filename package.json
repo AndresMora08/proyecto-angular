@@ -28,7 +28,7 @@
     "@popperjs/core": "^2.11.8",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/prismjs": "^1.26.5",
-    "apexcharts": "^5.3.2",
+    "apexcharts": "^5.13.0",
     "flatpickr": "^4.6.13",
     "ng-apexcharts": "^2.0.4",
     "ng-otp-input": "^2.0.9",

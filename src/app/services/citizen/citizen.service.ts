@@ -29,11 +29,30 @@ export class CitizenService {
   }
 
   create(citizen: Citizen): Observable<Citizen> {
-    return this.http.post<Citizen>(this.url, citizen);
+    // Garantizamos que mande la propiedad esperada por el backend en el cuerpo JSON
+    const cleanBody = {
+      name: citizen.name,
+      email: citizen.email,
+      phone: citizen.phone || (citizen as any).cellphone || '',
+      address: citizen.address,
+      latitude: citizen.latitude,
+      longitude: citizen.longitude,
+      status: citizen.status || 'active'
+    };
+    return this.http.post<Citizen>(this.url, cleanBody);
   }
 
   update(id: number, citizen: Citizen): Observable<Citizen> {
-    return this.http.put<Citizen>(`${this.url}/${id}`, citizen);
+    const cleanBody = {
+      name: citizen.name,
+      email: citizen.email,
+      phone: citizen.phone || (citizen as any).cellphone || '',
+      address: citizen.address,
+      latitude: citizen.latitude,
+      longitude: citizen.longitude,
+      status: citizen.status
+    };
+    return this.http.put<Citizen>(`${`${this.url}`}/${id}`, cleanBody);
   }
 
   delete(id: number): Observable<void> {

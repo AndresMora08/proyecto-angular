@@ -1,0 +1,41 @@
+<div class="p-6 space-y-6">
+
+  <div class="bg-white rounded-xl shadow p-4">
+
+    <h2 class="text-2xl font-bold mb-4">
+      Reportes Inteligentes
+    </h2>
+
+    <textarea
+      [(ngModel)]="query"
+      rows="4"
+      placeholder="Escribe una consulta..."
+      class="w-full border rounded-lg p-3"
+    ></textarea>
+
+    <button
+      (click)="sendQuery()"
+      class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg"
+    >
+      Enviar
+    </button>
+
+  </div>
+
+  <div *ngIf="loading">
+    Generando reporte...
+  </div>
+
+  <div *ngIf="report">
+
+    <h3 class="text-xl font-semibold mb-4">
+      Resultado
+    </h3>
+
+    <app-chart
+      [report]="report"
+    ></app-chart>
+
+  </div>
+
+</div>
