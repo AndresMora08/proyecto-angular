@@ -1,30 +1,39 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // <-- NUEVO: Importación necesaria para standalone
 import { OfficialService } from '../../../services/official/official.service';
 import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 import { GenericFormComponent } from '../../../components/ui/form/generic-form/generic-form.component';
 import { GenericSearchComponent } from '../../../components/ui/search/generic-search/generic-search.component';
 import { Official } from '../../../models/Official';
+import { FormField } from '../../../models/components/Form';
 
 @Component({
   selector: 'app-staff-management',
   standalone: true,
-  imports: [CommonModule, GenericTableComponent, GenericFormComponent, GenericSearchComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, // <-- NUEVO: Agregado aquí
+    GenericTableComponent, 
+    GenericFormComponent, 
+    GenericSearchComponent
+  ],
   templateUrl: './staff-management.component.html',
-  styleUrls: ['./staff-management.component.css']
+  styleUrl: './staff-management.component.css'
 })
 export class StaffManagementComponent implements OnInit {
   viewMode: 'list'|'create'|'edit' = 'list';
   funcionarios: Official[] = [];
   selected: any = {};
+  searchTerm: string = '';
 
   tableColumns = ['name','email','role','phone'];
 
-  formFields = [
-    { name: 'name', label: 'Nombre', type: 'text', required: true },
-    { name: 'email', label: 'Correo', type: 'email', required: true },
-    { name: 'role', label: 'Cargo / Rol', type: 'text', required: true },
-    { name: 'cellphone', label: 'Celular', type: 'text', required: false }
+  formFields: FormField[] = [
+    { name: 'name', label: 'Nombre', type: 'text' as const, required: true },
+    { name: 'email', label: 'Correo', type: 'email' as const, required: true },
+    { name: 'role', label: 'Cargo / Rol', type: 'text' as const, required: true },
+    { name: 'cellphone', label: 'Celular', type: 'text' as const, required: false }
   ];
 
   constructor(private officialService: OfficialService) {}

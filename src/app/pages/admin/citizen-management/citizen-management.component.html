@@ -1,18 +1,18 @@
 <div class="p-4">
   <div class="flex justify-between items-center mb-4">
     <h2 class="text-lg font-semibold">Gestión de Ciudadanos</h2>
-    <button class="btn btn-primary" (click)="showCreate()">Crear Ciudadano</button>
+    <button class="px-3 py-1 rounded bg-green-600 text-white font-medium hover:bg-green-700 transition" (click)="showCreate()">Crear Ciudadano</button>
   </div>
 
   <div *ngIf="viewMode === 'list'">
-    <app-generic-search (search)="loadCiudadanos()"></app-generic-search>
-    <app-generic-table [columns]="tableColumns" [rows]="ciudadanos" (action)="handleTableAction($event)"></app-generic-table>
+    <app-generic-search [(value)]="searchTerm" (search)="loadCiudadanos()"></app-generic-search>
+    <app-generic-table [columns]="tableColumns" [data]="ciudadanos" (onAction)="handleTableAction($event)"></app-generic-table>
   </div>
 
   <div *ngIf="viewMode === 'create' || viewMode === 'edit'">
-    <app-generic-form [fields]="formFields" [initialValue]="selected" (submit)="handleFormSubmit($event)"></app-generic-form>
+    <app-generic-form [fields]="formFields" [initialValues]="selected" (onSubmit)="handleFormSubmit($event)"></app-generic-form>
     <div class="mt-3">
-      <button class="btn" (click)="backToList()">Volver</button>
+      <button class="px-3 py-1 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition" (click)="backToList()">Volver</button>
     </div>
   </div>
 </div>

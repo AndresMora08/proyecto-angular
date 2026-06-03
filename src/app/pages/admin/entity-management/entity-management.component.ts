@@ -25,7 +25,7 @@ export class EntityManagementComponent implements OnInit {
   selectedEntity: any = {};
   searchTerm: string = '';
 
-  tableColumns: string[] = ['logo', 'name', 'description', 'status'];
+  tableColumns: string[] = ['logo', 'name', 'status'];
 
   tableActions: TableAction[] = [
     { 
@@ -40,11 +40,10 @@ export class EntityManagementComponent implements OnInit {
     }
   ];
 
+  // CORREGIDO: Se quitó totalmente el campo 'type' (Tipo de entidad)
   formFields: FormField[] = [
     { name: 'file', label: 'Logo de la entidad', type: 'file', required: false },
     { name: 'name', label: 'Nombre de la entidad', type: 'text', required: true },
-    { name: 'description', label: 'Descripción', type: 'text', required: true },
-    { name: 'type', label: 'Tipo de entidad', type: 'select', options: ['Entidad Pública', 'Entidad Privada'], required: true },
     { name: 'nit', label: 'NIT', type: 'text', required: true },
     { name: 'phone', label: 'Teléfono', type: 'text', required: false },
     { name: 'email', label: 'Correo electrónico', type: 'email', required: true },
@@ -65,11 +64,9 @@ export class EntityManagementComponent implements OnInit {
 
         this.entities = data.map((entity: any) => {
           const currentLogoValue = entity.logo_url || entity.logo || '';
-          const resolveDescription = entity.description || entity.desc || 'Sin descripción';
 
           return {
             ...entity,
-            description: resolveDescription,
             logo_url: this.entityService.getLogoUrl(currentLogoValue),
             logo: this.entityService.getLogoUrl(currentLogoValue) 
           };
@@ -94,14 +91,13 @@ export class EntityManagementComponent implements OnInit {
     const query = this.searchTerm.toLowerCase();
     return this.entities.filter(entity => 
       entity.name.toLowerCase().includes(query) || 
-      (entity.description && entity.description.toLowerCase().includes(query)) ||
       entity.nit.toLowerCase().includes(query)
     );
   }
 
   showCreateForm(): void {
     this.activeRowEntity = null;
-    this.selectedEntity = { status: 'active', type: 'Entidad Pública' };
+    this.selectedEntity = { status: 'active' };
     this.viewMode = 'create';
   }
 
@@ -131,10 +127,10 @@ export class EntityManagementComponent implements OnInit {
         cancelButtonText: 'Cancelar'
       }).then((result) => {
         if (result.isConfirmed) {
-          let id = entityItem.id;
+          let id = entityItem.id || (entityItem as any).id_entity;
           if (!id) {
             const original = this.entities.find(e => e.nit === entityItem.nit || e.name === entityItem.name);
-            id = original?.id;
+            id = original?.id || (original as any)?.id_entity;
           }
 
           if (id) {
@@ -162,7 +158,13 @@ export class EntityManagementComponent implements OnInit {
     console.log('➡️ handleFormSubmit detectado correctamente desde el HTML.');
     console.log('Datos interceptados del Formulario:', formData);
 
-    const entityPayload = formData as Entity;
+    const cleanedPayload = { ...formData };
+
+    if (!(cleanedPayload['file'] instanceof File)) {
+      delete cleanedPayload['file'];
+    }
+
+    const entityPayload = cleanedPayload as Entity;
 
     if (this.viewMode === 'create') {
       this.entityService.create(entityPayload).subscribe({
@@ -177,18 +179,17 @@ export class EntityManagementComponent implements OnInit {
           });
         },
         error: (err) => {
-          console.error(err);
+          console.error('Detalle completo del error HTTP:', err); 
           Swal.fire({
             icon: 'error',
             title: 'No se pudo crear',
-            text: 'Verifica los campos enviados o la estabilidad de la API.',
+            text: err.error?.message || 'Verifica los campos enviados o la estabilidad de la API.',
             confirmButtonColor: '#2563eb'
           });
         }
       });
     } 
     else if (this.viewMode === 'edit') {
-      // Búsqueda inteligente del identificador (ID)
       let id = this.activeRowEntity?.id || (this.activeRowEntity as any)?.id_entity || (this.activeRowEntity as any)?.entity_id;
       
       if (!id && this.activeRowEntity) {
@@ -227,7 +228,6 @@ export class EntityManagementComponent implements OnInit {
           }
         });
       } else {
-        console.error('Error: El ID se resolvió como undefined.');
         Swal.fire({
           icon: 'error',
           title: 'Error de Identificador',

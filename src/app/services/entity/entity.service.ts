@@ -47,21 +47,23 @@ export class EntityService {
 
   private toFormData(entity: Entity): FormData {
     const fd = new FormData();
-    fd.append('name', entity.name);
-    fd.append('nit', entity.nit);
     
-    // 💡 SOLUCIÓN 1: Ahora enviamos la descripción al backend para que no se pierda al guardar/editar
-    fd.append('description', entity.description || ''); 
-    
+    // CORREGIDO: Mapeo estricto e idéntico a las columnas estructurales recibidas del Backend
+    fd.append('name', entity.name || '');
+    fd.append('nit', entity.nit || '');
     fd.append('phone', entity.phone || '');
-    fd.append('email', entity.email);
-    fd.append('address', entity.address);
-    fd.append('logo_url', entity.logo_url || '');
-    fd.append('status', entity.status);
+    fd.append('email', entity.email || '');
+    fd.append('address', entity.address || '');
+    fd.append('status', entity.status || 'active');
+    
+    if (entity.logo_url) {
+      fd.append('logo_url', entity.logo_url);
+    }
     
     if (entity.file) {
       fd.append('file', entity.file);
     }
+    
     return fd;
   }
 }
