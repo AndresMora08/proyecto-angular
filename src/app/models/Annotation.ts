@@ -1,5 +1,5 @@
 export interface Annotation {
-  id?: number;
+  id_annotation?: number; // 👈 Clave primaria real
   id_neighborhood: number;
   id_citizen: number;
   description: string;

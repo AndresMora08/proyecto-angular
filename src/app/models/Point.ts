@@ -1,5 +1,5 @@
 export interface Point {
-  id?: number;
+  id_point?: number; // 👈 Clave primaria real
   id_neighborhood: number;
   id_annotation: number;
   latitude: number;
