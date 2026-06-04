@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://127.0.0.1:5000', 
+  apiUrl: 'http://127.0.0.1:5000/api/', 
   firebaseConfig: {
     apiKey: "AIzaSyAJTedQWQmuhfvRI8W6gmaHqKKlqg8xKrU",
     authDomain: "proyecto-angular-dab35.firebaseapp.com",
