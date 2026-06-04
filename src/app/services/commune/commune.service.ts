@@ -19,8 +19,9 @@ export class CommuneService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Commune> {
-    return this.http.get<Commune>(`${this.url}/${id}`);
+  // Ajustado para usar la nomenclatura exacta de tu base de datos
+  getById(id_commune: number): Observable<Commune> {
+    return this.http.get<Commune>(`${this.url}/${id_commune}`);
   }
 
   search(filters: { id_city?: number; page?: number; pageSize?: number }): Observable<any> {
@@ -35,11 +36,13 @@ export class CommuneService {
     return this.http.post<Commune>(this.url, commune);
   }
 
-  update(id: number, commune: Commune): Observable<Commune> {
-    return this.http.put<Commune>(`${this.url}/${id}`, commune);
+  // Ajustado para enviar la llave primaria correcta al endpoint de Flask
+  update(id_commune: number, commune: Commune): Observable<Commune> {
+    return this.http.put<Commune>(`${this.url}/${id_commune}`, commune);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  // Ajustado para procesar la eliminación sobre el recurso correcto
+  delete(id_commune: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_commune}`);
   }
 }

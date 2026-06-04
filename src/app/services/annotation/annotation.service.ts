@@ -19,12 +19,15 @@ export class AnnotationService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Annotation> {
-    return this.http.get<Annotation>(`${this.url}/${id}`);
+  getById(id_annotation: number): Observable<Annotation> {
+    return this.http.get<Annotation>(`${this.url}/${id_annotation}`);
   }
 
-  search(q: string): Observable<any> {
-    const params = new HttpParams().set('q', q);
+  // 💡 Añadimos soporte para buscar opcionalmente por id_neighborhood usando QueryParams
+  search(filters: { q?: string; id_neighborhood?: number }): Observable<any> {
+    let params = new HttpParams();
+    if (filters.q) params = params.set('q', filters.q);
+    if (filters.id_neighborhood) params = params.set('id_neighborhood', filters.id_neighborhood);
     return this.http.get<any>(`${this.url}/search`, { params });
   }
 
@@ -32,11 +35,11 @@ export class AnnotationService {
     return this.http.post<Annotation>(this.url, annotation);
   }
 
-  update(id: number, annotation: Annotation): Observable<Annotation> {
-    return this.http.put<Annotation>(`${this.url}/${id}`, annotation);
+  update(id_annotation: number, annotation: Annotation): Observable<Annotation> {
+    return this.http.put<Annotation>(`${this.url}/${id_annotation}`, annotation);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  delete(id_annotation: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_annotation}`);
   }
 }

@@ -19,8 +19,8 @@ export class PointService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Point> {
-    return this.http.get<Point>(`${this.url}/${id}`);
+  getById(id_point: number): Observable<Point> {
+    return this.http.get<Point>(`${this.url}/${id_point}`);
   }
 
   search(filters: { id_neighborhood?: number; page?: number; pageSize?: number }): Observable<any> {
@@ -35,11 +35,11 @@ export class PointService {
     return this.http.post<Point>(this.url, point);
   }
 
-  update(id: number, point: Point): Observable<Point> {
-    return this.http.put<Point>(`${this.url}/${id}`, point);
+  update(id_point: number, point: Point): Observable<Point> {
+    return this.http.put<Point>(`${this.url}/${id_point}`, point);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  delete(id_point: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_point}`);
   }
 }

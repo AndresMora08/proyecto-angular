@@ -19,8 +19,9 @@ export class NeighborhoodService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Neighborhood> {
-    return this.http.get<Neighborhood>(`${this.url}/${id}`);
+  // 💡 Ajustado para usar id_neighborhood según tu backend
+  getById(id_neighborhood: number): Observable<Neighborhood> {
+    return this.http.get<Neighborhood>(`${this.url}/${id_neighborhood}`);
   }
 
   search(filters: { id_commune?: number; page?: number; pageSize?: number }): Observable<any> {
@@ -35,11 +36,13 @@ export class NeighborhoodService {
     return this.http.post<Neighborhood>(this.url, neighborhood);
   }
 
-  update(id: number, neighborhood: Neighborhood): Observable<Neighborhood> {
-    return this.http.put<Neighborhood>(`${this.url}/${id}`, neighborhood);
+  // 💡 Ajustado para enviar id_neighborhood al endpoint de Flask
+  update(id_neighborhood: number, neighborhood: Neighborhood): Observable<Neighborhood> {
+    return this.http.put<Neighborhood>(`${this.url}/${id_neighborhood}`, neighborhood);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  // 💡 Ajustado para eliminar sobre el identificador correcto
+  delete(id_neighborhood: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_neighborhood}`);
   }
 }

@@ -19,8 +19,9 @@ export class DepartmentService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Department> {
-    return this.http.get<Department>(`${this.url}/${id}`);
+  // Ajustado para usar id_department según tu backend
+  getById(id_department: number): Observable<Department> {
+    return this.http.get<Department>(`${this.url}/${id_department}`);
   }
 
   search(q: string, page: number = 1, pageSize: number = 5): Observable<any> {
@@ -32,11 +33,13 @@ export class DepartmentService {
     return this.http.post<Department>(this.url, department);
   }
 
-  update(id: number, department: Department): Observable<Department> {
-    return this.http.put<Department>(`${this.url}/${id}`, department);
+  // Ajustado para enviar id_department al endpoint de Flask
+  update(id_department: number, department: Department): Observable<Department> {
+    return this.http.put<Department>(`${this.url}/${id_department}`, department);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  // Ajustado para eliminar sobre el identificador correcto
+  delete(id_department: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_department}`);
   }
 }

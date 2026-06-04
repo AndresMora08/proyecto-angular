@@ -25,8 +25,9 @@ import { EntityManagementComponent } from './pages/admin/entity-management/entit
 import { CategoryManagementComponent } from './pages/admin/category-management/category-management.component';
 import { StaffManagementComponent } from './pages/admin/staff-management/staff-management.component';
 import { CitizenManagementComponent } from './pages/admin/citizen-management/citizen-management.component';
-// 👈 NUEVA IMPORTACIÓN: GESTIÓN DE COMUNAS (CU-05)
 import { CommuneManagementComponent } from './pages/admin/commune-management/commune-management.component';
+// 👈 NUEVA IMPORTACIÓN: GESTIÓN DE BARRIOS (CU-06)
+import { NeighborhoodManagementComponent } from './pages/admin/neighborhood-management/neighborhood-management.component';
 
 export const routes: Routes = [
   {
@@ -85,13 +86,17 @@ export const routes: Routes = [
         component: CitizenManagementComponent,
         title: 'Gestión de Ciudadanos | Territorial'
       },
-      // 👈 NUEVA RUTA REGISTRADA PARA LAS COMUNAS
       {
         path: 'communes',
         component: CommuneManagementComponent,
         title: 'Gestión de Comunas | Territorial'
       },
-      
+      // 👈 NUEVA RUTA: GESTIÓN DE BARRIOS
+      {
+        path: 'neighborhoods',
+        component: NeighborhoodManagementComponent,
+        title: 'Gestión de Barrios | Territorial'
+      },
       {
         path: 'invoice',
         component: InvoicesComponent,

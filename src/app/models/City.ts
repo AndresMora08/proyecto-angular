@@ -1,6 +1,6 @@
 
 export interface City {
-  id?: number;
+  id_city: number;
   id_department: number;
   name: string;
   dane_code: string;

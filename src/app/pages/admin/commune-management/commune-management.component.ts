@@ -1,16 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs'; // 👈 Importante para combinar las peticiones
+
 import { CommuneService } from '../../../services/commune/commune.service';
 import { CityService } from '../../../services/city/city.service';
 import { DepartmentService } from '../../../services/department/department.service';
+import { ColombiaApiService } from '../../../services/colombia/colombia.service'; 
+import { NeighborhoodService } from '../../../services/neighborhood/neighborhood.service'; // 👈 Inyectamos tu servicio de barrios
 
 import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 import { GenericSearchComponent } from '../../../components/ui/search/generic-search/generic-search.component';
 
 import { Commune } from '../../../models/Commune';
-import { City } from '../../../models/City';
+import { City } from '../../../models/City'; 
 import { Department } from '../../../models/Departament';
+import { Neighborhood } from '../../../models/Neighborhood'; // 👈 Modelo de Barrio
 import { TableAction } from '../../../models/components/Table';
 
 import Swal from 'sweetalert2';
@@ -28,34 +33,29 @@ import Swal from 'sweetalert2';
   styleUrl: './commune-management.component.css'
 })
 export class CommuneManagementComponent implements OnInit {
-  // Datos principales
-  comunas: any[] = []; // Guardará las comunas con los nombres mapeados de ciudad y depto.
-  departments: Department[] = [];
-  cities: City[] = [];
-  filteredCities: City[] = [];
+  comunas: any[] = []; 
+  departments: Department[] = []; 
+  cities: City[] = []; 
+  neighborhoods: Neighborhood[] = []; // 👈 Lista local para guardar los barrios temporales
 
-  // Filtros de la barra superior (Mockup)
+  apiDepartments: any[] = [];
+  apiCities: any[] = [];
+
   selectedDeptFilter: string = '';
   selectedCityFilter: string = '';
   searchTerm: string = '';
 
-  // Control del Formulario Lateral (Split-screen)
   isFormOpen: boolean = false;
   formMode: 'create' | 'edit' = 'create';
   
-  // Modelo reactivo del formulario lateral
   formData = {
-    id: null as number | null,
-    id_department: '' as string | number,
-    id_city: '' as string | number,
+    id_commune: null as number | null,     
+    id_department: '' as string | number, 
+    id_city: '' as string | number,       
     name: '',
     status: 'active'
   };
 
-  // Validación simulada de API Colombia (Verde en Mockup)
-  apiColombiaVerified: boolean = false;
-
-  // Columnas según la imagen de referencia
   tableColumns = ['name', 'cityName', 'departmentName', 'barriosCount', 'status'];
   
   tableActions: TableAction[] = [
@@ -66,7 +66,9 @@ export class CommuneManagementComponent implements OnInit {
   constructor(
     private communeService: CommuneService,
     private cityService: CityService,
-    private departmentService: DepartmentService
+    private departmentService: DepartmentService,
+    private colombiaApiService: ColombiaApiService,
+    private neighborhoodService: NeighborhoodService // 👈 Declaramos el servicio en el constructor
   ) {}
 
   ngOnInit(): void {
@@ -74,27 +76,45 @@ export class CommuneManagementComponent implements OnInit {
   }
 
   loadInitialData(): void {
-    // Carga paralela de departamentos y ciudades para construir la rejilla
     this.departmentService.getAll().subscribe(depts => this.departments = depts || []);
+    
     this.cityService.getAll().subscribe(cities => {
       this.cities = cities || [];
       this.loadComunas();
     });
+
+    this.colombiaApiService.getDepartments().subscribe(res => {
+      this.apiDepartments = res || [];
+    });
   }
 
+  /**
+   * Carga sincrónica y cruzada utilizando tu NeighborhoodService
+   */
   loadComunas(): void {
-    this.communeService.getAll().subscribe({
-      next: (data) => {
-        // Enriquecer el listado con nombres legibles cruzando IDs (Simulando la respuesta relacional)
-        this.comunas = (data || []).map(commune => {
-          const city = this.cities.find(c => c.id === commune.id_city);
-          const dept = this.departments.find(d => d.id === city?.id_department);
+    // 💡 Ejecutamos ambas peticiones en paralelo para tener comunas y barrios al mismo tiempo
+    forkJoin({
+      communesData: this.communeService.getAll(),
+      neighborhoodsData: this.neighborhoodService.getAll()
+    }).subscribe({
+      next: ({ communesData, neighborhoodsData }) => {
+        this.neighborhoods = neighborhoodsData || [];
+        
+        this.comunas = (communesData || []).map(commune => {
+          const city = this.cities.find(c => c.id_city === commune.id_city);
+          const dept = this.departments.find(d => d.id_department === city?.id_department);
+          
+          // 💡 FILTRADO Y CONTEO DINÁMICO: 
+          // Buscamos cuántos barrios de tu BD local pertenecen a este id_commune
+          const count = this.neighborhoods.filter(n => n.id_commune === commune.id_commune).length;
+
           return {
             ...commune,
+            id: commune.id_commune, 
             cityName: city ? city.name : 'Desconocida',
             departmentName: dept ? dept.name : 'Desconocido',
             id_department: city ? city.id_department : '',
-            barriosCount: Math.floor(Math.random() * 12) + 1 // Simulación temporal de barrios asociados
+            barriosCount: count // 👈 Asignación en tiempo real en la vista
           };
         });
       },
@@ -102,7 +122,6 @@ export class CommuneManagementComponent implements OnInit {
     });
   }
 
-  // Filtrado reactivo local basado en selectores superiores y barra de búsqueda
   get filteredComunas(): any[] {
     return this.comunas.filter(c => {
       const matchDept = !this.selectedDeptFilter || c.id_department?.toString() === this.selectedDeptFilter.toString();
@@ -112,40 +131,26 @@ export class CommuneManagementComponent implements OnInit {
     });
   }
 
-  // Encadenamiento reactivo cuando cambia el departamento en filtros principales
   onFilterDeptChange(): void {
     this.selectedCityFilter = '';
-    // Podrías filtrar ciudades disponibles si fuera necesario globalmente
   }
 
-  // Encadenamiento reactivo dentro del formulario lateral
   onFormDeptChange(): void {
-    const deptId = this.formData.id_department;
+    const deptId = Number(this.formData.id_department);
     this.formData.id_city = '';
-    this.apiColombiaVerified = false;
+    this.apiCities = [];
 
     if (deptId) {
-      this.filteredCities = this.cities.filter(c => c.id_department?.toString() === deptId.toString());
-    } else {
-      this.filteredCities = [];
-    }
-  }
-
-  // Evento gatillado cuando el usuario escoge la ciudad final en el formulario
-  onFormCityChange(): void {
-    if (this.formData.id_city) {
-      // Activamos el aviso visual verde de "API Colombia" (Simulada por ahora)
-      this.apiColombiaVerified = true;
-    } else {
-      this.apiColombiaVerified = false;
+      this.colombiaApiService.getCitiesByDepartmentId(deptId).subscribe(res => {
+        this.apiCities = res || [];
+      });
     }
   }
 
   openCreate(): void {
     this.formMode = 'create';
-    this.apiColombiaVerified = false;
-    this.formData = { id: null, id_department: '', id_city: '', name: '', status: 'active' };
-    this.filteredCities = [];
+    this.formData = { id_commune: null, id_department: '', id_city: '', name: '', status: 'active' };
+    this.apiCities = [];
     this.isFormOpen = true;
   }
 
@@ -159,13 +164,27 @@ export class CommuneManagementComponent implements OnInit {
       return;
     }
 
+    const selectedApiCity = this.apiCities.find(c => c.id.toString() === this.formData.id_city.toString());
+    if (!selectedApiCity) return;
+
+    const localCity = this.cities.find(c => c.name.toLowerCase().trim() === selectedApiCity.name.toLowerCase().trim());
+
+    if (!localCity) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Ciudad no registrada',
+        text: `La ciudad "${selectedApiCity.name}" no está dada de alta en el sistema local. Regístrala primero.`
+      });
+      return;
+    }
+
+    const cityIdReal = localCity.id_city;
     const nombreNormalizado = this.formData.name.trim();
 
-    // 5. Flujo alternativo 5a: Validar duplicados en la misma ciudad
     const existeDuplicado = this.comunas.some(c => 
-      c.id_city?.toString() === this.formData.id_city.toString() &&
+      c.id_city === cityIdReal &&
       c.name?.toLowerCase().trim() === nombreNormalizado.toLowerCase() &&
-      c.id !== this.formData.id
+      c.id_commune !== this.formData.id_commune 
     );
 
     if (existeDuplicado) {
@@ -179,7 +198,7 @@ export class CommuneManagementComponent implements OnInit {
     }
 
     const payload: Commune = {
-      id_city: Number(this.formData.id_city),
+      id_city: Number(cityIdReal),
       name: nombreNormalizado,
       status: this.formData.status
     };
@@ -189,12 +208,12 @@ export class CommuneManagementComponent implements OnInit {
         next: () => {
           this.toastSuccess('¡Comuna Creada!', 'La comuna se agregó correctamente.');
           this.closeForm();
-          this.loadComunas();
+          this.loadComunas(); // 👈 Recargamos llamando al forkJoin actualizado
         }
       });
     } else {
-      if (this.formData.id) {
-        this.communeService.update(this.formData.id, payload).subscribe({
+      if (this.formData.id_commune) { 
+        this.communeService.update(this.formData.id_commune, payload).subscribe({ 
           next: () => {
             this.toastSuccess('¡Cambios Guardados!', 'Información de comuna actualizada.');
             this.closeForm();
@@ -209,25 +228,38 @@ export class CommuneManagementComponent implements OnInit {
     const item = event.item;
     if (event.actionName === 'edit') {
       this.formMode = 'edit';
+      
+      const localCity = this.cities.find(c => c.id_city === item.id_city);
+      const apiDept = this.apiDepartments.find(d => d.name.toLowerCase().trim() === item.departmentName.toLowerCase().trim());
+
       this.formData = {
-        id: item.id,
-        id_department: item.id_department || '',
-        id_city: item.id_city || '',
+        id_commune: item.id_commune, 
+        id_department: apiDept ? apiDept.id : '',
+        id_city: '', 
         name: item.name || '',
         status: item.status || 'active'
       };
-      // Forzar encadenamiento de ciudades del depto seleccionado
-      this.filteredCities = this.cities.filter(c => c.id_department?.toString() === item.id_department?.toString());
-      this.apiColombiaVerified = true;
+
+      if (apiDept) {
+        this.colombiaApiService.getCitiesByDepartmentId(apiDept.id).subscribe(res => {
+          this.apiCities = res || [];
+          const apiCity = this.apiCities.find(c => c.name.toLowerCase().trim() === localCity?.name.toLowerCase().trim());
+          if (apiCity) {
+            this.formData.id_city = apiCity.id;
+          }
+        });
+      }
+
       this.isFormOpen = true;
     } 
     else if (event.actionName === 'delete') {
-      // Flujo alternativo E2: Validar si posee dependencias (barrios asociados)
-      if (item.barriosCount > 0 && Math.random() > 0.5) { // Simulación: Si supera umbral, asumimos que tiene amarres en BD
+      // 💡 VALIDACIÓN REAL PROTEGIDA:
+      // Si el conteo reactivo calculó que posee barrios asociados, impedirá el borrado
+      if (item.barriosCount > 0) { 
         Swal.fire({
           icon: 'error',
-          title: 'No se puede eliminar',
-          text: `La comuna "${item.name}" cuenta actualmente con ${item.barriosCount} barrios vinculados. Remueve las dependencias antes de reintentar.`,
+          title: 'Imposible Eliminar',
+          text: `La comuna "${item.name}" tiene barrios dependientes asociados en el sistema.`,
           confirmButtonColor: '#ef4444'
         });
       } else {
@@ -245,8 +277,8 @@ export class CommuneManagementComponent implements OnInit {
       confirmButtonColor: '#dc2626',
       confirmButtonText: 'Sí, eliminar'
     }).then((res) => {
-      if (res.isConfirmed && item.id) {
-        this.communeService.delete(item.id).subscribe({
+      if (res.isConfirmed && item.id_commune) { 
+        this.communeService.delete(item.id_commune).subscribe({
           next: () => {
             this.toastSuccess('Eliminada', 'La comuna fue retirada del sistema.');
             this.loadComunas();
