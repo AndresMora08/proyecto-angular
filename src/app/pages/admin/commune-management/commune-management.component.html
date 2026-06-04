@@ -24,7 +24,7 @@
             (change)="onFilterDeptChange()"
             class="w-full bg-white border border-slate-200 text-sm rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
             <option value="">Todos los departamentos</option>
-            <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.name }}</option>
+            <option *ngFor="let dept of departments" [value]="dept.id_department">{{ dept.name }}</option>
           </select>
         </div>
 
@@ -34,7 +34,7 @@
             [(ngModel)]="selectedCityFilter"
             class="w-full bg-white border border-slate-200 text-sm rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
             <option value="">Todas las ciudades</option>
-            <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
+            <option *ngFor="let city of cities" [value]="city.id_city">{{ city.name }}</option>
           </select>
         </div>
 
@@ -76,7 +76,7 @@
             (change)="onFormDeptChange()"
             class="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
             <option value="" disabled selected>Selecciona un departamento...</option>
-            <option *ngFor="let d of departments" [value]="d.id">{{ d.name }}</option>
+            <option *ngFor="let d of apiDepartments" [value]="d.id">{{ d.name }}</option>
           </select>
         </div>
 
@@ -84,20 +84,11 @@
           <label class="block text-sm font-semibold text-slate-700 mb-1">Ciudad <span class="text-red-500">*</span></label>
           <select 
             [(ngModel)]="formData.id_city"
-            (change)="onFormCityChange()"
             [disabled]="!formData.id_department"
             class="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-slate-50 disabled:text-slate-400">
             <option value="" disabled selected>Selecciona una ciudad...</option>
-            <option *ngFor="let c of filteredCities" [value]="c.id">{{ c.name }}</option>
+            <option *ngFor="let c of apiCities" [value]="c.id">{{ c.name }}</option>
           </select>
-        </div>
-
-        <div *ngIf="apiColombiaVerified" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5">
-          <div class="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</div>
-          <div>
-            <p class="text-xs font-bold text-emerald-800">Datos verificados en API Colombia</p>
-            <p class="text-[11px] text-emerald-600/90">Ubicación territorial válida y normalizada.</p>
-          </div>
         </div>
 
         <div>

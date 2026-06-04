@@ -85,7 +85,7 @@ export const routes: Routes = [
         component: CitizenManagementComponent,
         title: 'Gestión de Ciudadanos | Territorial'
       },
-      // 👈 NUEVA RUTA REGISTRADA PARA LAS COMUNAS
+      
       {
         path: 'communes',
         component: CommuneManagementComponent,

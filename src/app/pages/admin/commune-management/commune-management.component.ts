@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { CommuneService } from '../../../services/commune/commune.service';
 import { CityService } from '../../../services/city/city.service';
 import { DepartmentService } from '../../../services/department/department.service';
+import { ColombiaApiService } from '../../../services/colombia/colombia.service'; 
 
 import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 import { GenericSearchComponent } from '../../../components/ui/search/generic-search/generic-search.component';
 
 import { Commune } from '../../../models/Commune';
-import { City } from '../../../models/City';
-import { Department } from '../../../models/Departament';
+import { City } from '../../../models/City'; 
+import { Department } from '../../../models/Departament'; 
 import { TableAction } from '../../../models/components/Table';
 
 import Swal from 'sweetalert2';
@@ -28,34 +29,33 @@ import Swal from 'sweetalert2';
   styleUrl: './commune-management.component.css'
 })
 export class CommuneManagementComponent implements OnInit {
-  // Datos principales
-  comunas: any[] = []; // Guardará las comunas con los nombres mapeados de ciudad y depto.
-  departments: Department[] = [];
-  cities: City[] = [];
-  filteredCities: City[] = [];
+  // Datos locales del sistema (Tu propia BD para renderizar la tabla principal)
+  comunas: any[] = []; 
+  departments: Department[] = []; // 👈 Lista de departamentos locales tipados de forma estricta
+  cities: City[] = []; 
 
-  // Filtros de la barra superior (Mockup)
+  // Listas de la API de Colombia exclusivas para rellenar los selectores del Formulario
+  apiDepartments: any[] = [];
+  apiCities: any[] = [];
+
+  // Filtros de búsqueda superiores de la tabla
   selectedDeptFilter: string = '';
   selectedCityFilter: string = '';
   searchTerm: string = '';
 
-  // Control del Formulario Lateral (Split-screen)
+  // Control de estados del Formulario Lateral
   isFormOpen: boolean = false;
   formMode: 'create' | 'edit' = 'create';
   
-  // Modelo reactivo del formulario lateral
   formData = {
-    id: null as number | null,
-    id_department: '' as string | number,
-    id_city: '' as string | number,
+    id_commune: null as number | null,     
+    id_department: '' as string | number, // Guardará el ID de la API de Colombia
+    id_city: '' as string | number,       // Guardará el ID de la API de Colombia
     name: '',
     status: 'active'
   };
 
-  // Validación simulada de API Colombia (Verde en Mockup)
-  apiColombiaVerified: boolean = false;
-
-  // Columnas según la imagen de referencia
+  // Configuración de la tabla principal
   tableColumns = ['name', 'cityName', 'departmentName', 'barriosCount', 'status'];
   
   tableActions: TableAction[] = [
@@ -66,7 +66,8 @@ export class CommuneManagementComponent implements OnInit {
   constructor(
     private communeService: CommuneService,
     private cityService: CityService,
-    private departmentService: DepartmentService
+    private departmentService: DepartmentService,
+    private colombiaApiService: ColombiaApiService 
   ) {}
 
   ngOnInit(): void {
@@ -74,27 +75,37 @@ export class CommuneManagementComponent implements OnInit {
   }
 
   loadInitialData(): void {
-    // Carga paralela de departamentos y ciudades para construir la rejilla
+    // 1. Cargar bases de datos locales para el renderizado y búsquedas de relación
     this.departmentService.getAll().subscribe(depts => this.departments = depts || []);
     this.cityService.getAll().subscribe(cities => {
       this.cities = cities || [];
       this.loadComunas();
+    });
+
+    // 2. Traer los departamentos oficiales directamente desde la API de Colombia para el selector
+    this.colombiaApiService.getDepartments().subscribe(res => {
+      this.apiDepartments = res || [];
     });
   }
 
   loadComunas(): void {
     this.communeService.getAll().subscribe({
       next: (data) => {
-        // Enriquecer el listado con nombres legibles cruzando IDs (Simulando la respuesta relacional)
         this.comunas = (data || []).map(commune => {
-          const city = this.cities.find(c => c.id === commune.id_city);
-          const dept = this.departments.find(d => d.id === city?.id_department);
+          const city = this.cities.find(c => c.id_city === commune.id_city);
+          const dept = this.departments.find(d => d.id_department === city?.id_department);
+          
           return {
             ...commune,
+            id: commune.id_commune, // ID unificado para la tabla genérica
             cityName: city ? city.name : 'Desconocida',
             departmentName: dept ? dept.name : 'Desconocido',
             id_department: city ? city.id_department : '',
-            barriosCount: Math.floor(Math.random() * 12) + 1 // Simulación temporal de barrios asociados
+            
+            // 💡 CORRECCIÓN AQUÍ: 
+            // Si el backend en el futuro te envía la propiedad (ej. barrios_count), la usamos.
+            // De lo contrario, por defecto será 0 (para comunas nuevas o sin barrios aún).
+            barriosCount: 0
           };
         });
       },
@@ -102,7 +113,6 @@ export class CommuneManagementComponent implements OnInit {
     });
   }
 
-  // Filtrado reactivo local basado en selectores superiores y barra de búsqueda
   get filteredComunas(): any[] {
     return this.comunas.filter(c => {
       const matchDept = !this.selectedDeptFilter || c.id_department?.toString() === this.selectedDeptFilter.toString();
@@ -112,40 +122,29 @@ export class CommuneManagementComponent implements OnInit {
     });
   }
 
-  // Encadenamiento reactivo cuando cambia el departamento en filtros principales
   onFilterDeptChange(): void {
     this.selectedCityFilter = '';
-    // Podrías filtrar ciudades disponibles si fuera necesario globalmente
   }
 
-  // Encadenamiento reactivo dentro del formulario lateral
+  /**
+   * EVENTO DIRECTO: Al dar click a un departamento, trae automáticamente las ciudades de la API de Colombia
+   */
   onFormDeptChange(): void {
-    const deptId = this.formData.id_department;
+    const deptId = Number(this.formData.id_department);
     this.formData.id_city = '';
-    this.apiColombiaVerified = false;
+    this.apiCities = [];
 
     if (deptId) {
-      this.filteredCities = this.cities.filter(c => c.id_department?.toString() === deptId.toString());
-    } else {
-      this.filteredCities = [];
-    }
-  }
-
-  // Evento gatillado cuando el usuario escoge la ciudad final en el formulario
-  onFormCityChange(): void {
-    if (this.formData.id_city) {
-      // Activamos el aviso visual verde de "API Colombia" (Simulada por ahora)
-      this.apiColombiaVerified = true;
-    } else {
-      this.apiColombiaVerified = false;
+      this.colombiaApiService.getCitiesByDepartmentId(deptId).subscribe(res => {
+        this.apiCities = res || [];
+      });
     }
   }
 
   openCreate(): void {
     this.formMode = 'create';
-    this.apiColombiaVerified = false;
-    this.formData = { id: null, id_department: '', id_city: '', name: '', status: 'active' };
-    this.filteredCities = [];
+    this.formData = { id_commune: null, id_department: '', id_city: '', name: '', status: 'active' };
+    this.apiCities = [];
     this.isFormOpen = true;
   }
 
@@ -153,19 +152,36 @@ export class CommuneManagementComponent implements OnInit {
     this.isFormOpen = false;
   }
 
+  /**
+   * GUARDA LA COMUNA MAPEANDO EL ID_CITY REAL DEL BACKEND
+   */
   saveCommune(): void {
     if (!this.formData.id_city || !this.formData.name.trim()) {
       Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor diligencia todos los campos obligatorios.' });
       return;
     }
 
+    const selectedApiCity = this.apiCities.find(c => c.id.toString() === this.formData.id_city.toString());
+    if (!selectedApiCity) return;
+
+    const localCity = this.cities.find(c => c.name.toLowerCase().trim() === selectedApiCity.name.toLowerCase().trim());
+
+    if (!localCity) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Ciudad no registrada',
+        text: `La ciudad "${selectedApiCity.name}" no está dada de alta en el sistema local. Regístrala primero.`
+      });
+      return;
+    }
+
+    const cityIdReal = localCity.id_city;
     const nombreNormalizado = this.formData.name.trim();
 
-    // 5. Flujo alternativo 5a: Validar duplicados en la misma ciudad
     const existeDuplicado = this.comunas.some(c => 
-      c.id_city?.toString() === this.formData.id_city.toString() &&
+      c.id_city === cityIdReal &&
       c.name?.toLowerCase().trim() === nombreNormalizado.toLowerCase() &&
-      c.id !== this.formData.id
+      c.id_commune !== this.formData.id_commune 
     );
 
     if (existeDuplicado) {
@@ -179,7 +195,7 @@ export class CommuneManagementComponent implements OnInit {
     }
 
     const payload: Commune = {
-      id_city: Number(this.formData.id_city),
+      id_city: Number(cityIdReal),
       name: nombreNormalizado,
       status: this.formData.status
     };
@@ -189,16 +205,16 @@ export class CommuneManagementComponent implements OnInit {
         next: () => {
           this.toastSuccess('¡Comuna Creada!', 'La comuna se agregó correctamente.');
           this.closeForm();
-          this.loadComunas();
+          this.loadInitialData(); 
         }
       });
     } else {
-      if (this.formData.id) {
-        this.communeService.update(this.formData.id, payload).subscribe({
+      if (this.formData.id_commune) { 
+        this.communeService.update(this.formData.id_commune, payload).subscribe({ 
           next: () => {
             this.toastSuccess('¡Cambios Guardados!', 'Información de comuna actualizada.');
             this.closeForm();
-            this.loadComunas();
+            this.loadInitialData();
           }
         });
       }
@@ -209,25 +225,38 @@ export class CommuneManagementComponent implements OnInit {
     const item = event.item;
     if (event.actionName === 'edit') {
       this.formMode = 'edit';
+      
+      const localCity = this.cities.find(c => c.id_city === item.id_city);
+      const apiDept = this.apiDepartments.find(d => d.name.toLowerCase().trim() === item.departmentName.toLowerCase().trim());
+
       this.formData = {
-        id: item.id,
-        id_department: item.id_department || '',
-        id_city: item.id_city || '',
+        id_commune: item.id_commune, 
+        id_department: apiDept ? apiDept.id : '',
+        id_city: '', 
         name: item.name || '',
         status: item.status || 'active'
       };
-      // Forzar encadenamiento de ciudades del depto seleccionado
-      this.filteredCities = this.cities.filter(c => c.id_department?.toString() === item.id_department?.toString());
-      this.apiColombiaVerified = true;
+
+      if (apiDept) {
+        this.colombiaApiService.getCitiesByDepartmentId(apiDept.id).subscribe(res => {
+          this.apiCities = res || [];
+          const apiCity = this.apiCities.find(c => c.name.toLowerCase().trim() === localCity?.name.toLowerCase().trim());
+          if (apiCity) {
+            this.formData.id_city = apiCity.id;
+          }
+        });
+      }
+
       this.isFormOpen = true;
     } 
     else if (event.actionName === 'delete') {
-      // Flujo alternativo E2: Validar si posee dependencias (barrios asociados)
-      if (item.barriosCount > 0 && Math.random() > 0.5) { // Simulación: Si supera umbral, asumimos que tiene amarres en BD
+      // 💡 CORREGIDO: Bloquea la eliminación si posee CUALQUIER barrio registrado (> 0)
+      // Como actualmente es 0, siempre pasará directo al else de forma correcta y segura.
+      if (item.barriosCount > 0) { 
         Swal.fire({
           icon: 'error',
-          title: 'No se puede eliminar',
-          text: `La comuna "${item.name}" cuenta actualmente con ${item.barriosCount} barrios vinculados. Remueve las dependencias antes de reintentar.`,
+          title: 'Imposible Eliminar',
+          text: `La comuna "${item.name}" tiene barrios dependientes asociados en el sistema.`,
           confirmButtonColor: '#ef4444'
         });
       } else {
@@ -245,11 +274,11 @@ export class CommuneManagementComponent implements OnInit {
       confirmButtonColor: '#dc2626',
       confirmButtonText: 'Sí, eliminar'
     }).then((res) => {
-      if (res.isConfirmed && item.id) {
-        this.communeService.delete(item.id).subscribe({
+      if (res.isConfirmed && item.id_commune) { 
+        this.communeService.delete(item.id_commune).subscribe({
           next: () => {
             this.toastSuccess('Eliminada', 'La comuna fue retirada del sistema.');
-            this.loadComunas();
+            this.loadInitialData();
           }
         });
       }

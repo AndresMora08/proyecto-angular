@@ -19,8 +19,9 @@ export class CityService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<City> {
-    return this.http.get<City>(`${this.url}/${id}`);
+  // Ajustado para usar id_city según la firma de tu backend
+  getById(id_city: number): Observable<City> {
+    return this.http.get<City>(`${this.url}/${id_city}`);
   }
 
   search(filters: { id_department?: number; q?: string; page?: number; pageSize?: number }): Observable<any> {
@@ -36,11 +37,13 @@ export class CityService {
     return this.http.post<City>(this.url, city);
   }
 
-  update(id: number, city: City): Observable<City> {
-    return this.http.put<City>(`${this.url}/${id}`, city);
+  // Ajustado para enviar id_city al endpoint de Flask
+  update(id_city: number, city: City): Observable<City> {
+    return this.http.put<City>(`${this.url}/${id_city}`, city);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  // Ajustado para eliminar sobre el identificador correcto
+  delete(id_city: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_city}`);
   }
 }
