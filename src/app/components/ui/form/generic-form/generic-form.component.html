@@ -1,0 +1,57 @@
+<form [formGroup]="form" (ngSubmit)="sendForm()" class="rounded-lg border border-stroke bg-white p-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+  
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+    @for (field of fields; track field.name) {
+      <div [ngClass]="field.type === 'file' || field.type === 'email' ? 'md:col-span-2' : ''">
+        
+        <label class="mb-2 block text-sm font-medium text-black dark:text-white">
+          {{ field.label }} @if (field.required) { <span class="text-red-500">*</span> }
+        </label>
+
+        @if (field.type === 'select') {
+          <select [formControlName]="field.name" class="w-full rounded-md border border-stroke bg-transparent py-3 px-4 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input dark:text-white">
+            @for (option of field.options; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        }
+
+        @else if (field.type === 'file') {
+          <div class="flex items-center justify-center w-full">
+            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-stroke rounded-md cursor-pointer hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4 transition">
+              <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <svg class="w-8 h-8 mb-3 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                </svg>
+                <p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Haz clic para subir tu foto</span> o arrastra y suelta</p>
+              </div>
+              <input type="file" accept="image/*" class="hidden" (change)="onFileChange($event, field.name)" />
+            </label>
+          </div>
+          @if (form.get(field.name)?.value) {
+            <p class="text-xs text-green-600 mt-1">Archivo cargado: {{ form.get(field.name)?.value.name }}</p>
+          }
+        }
+
+        @else {
+          <input [type]="field.type" [formControlName]="field.name" class="w-full rounded-md border border-stroke bg-transparent py-3 px-4 outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input dark:text-white" />
+        }
+
+        @if (isFieldInvalid(field.name)) {
+          <div class="text-sm text-red-500 mt-1">
+            @if (form.get(field.name)?.errors?.['required']) { El campo es obligatorio. }
+            @if (form.get(field.name)?.errors?.['email']) { El correo electrónico no es válido. }
+          </div>
+        }
+
+      </div>
+    }
+  </div>
+
+  <div class="mt-6 flex justify-end gap-3">
+    <button type="submit" [disabled]="form.invalid" class="rounded-md bg-green-700 px-5 py-2 text-sm font-medium text-white transition hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed">
+      {{ buttonLabel }}
+    </button>
+  </div>
+
+</form>
