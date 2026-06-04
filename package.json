@@ -33,6 +33,7 @@
     "flatpickr": "^4.6.13",
     "ng-apexcharts": "^2.0.4",
     "ng-otp-input": "^2.0.9",
+    "ngx-cookie-service": "^21.0.0",
     "postcss": "^8.5.6",
     "prismjs": "^1.30.0",
     "rxjs": "~7.8.0",
