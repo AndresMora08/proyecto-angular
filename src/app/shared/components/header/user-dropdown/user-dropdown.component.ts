@@ -1,22 +1,35 @@
-import { Component } from '@angular/core';
-import { DropdownComponent } from '../../ui/dropdown/dropdown.component';
+import { Component, inject } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { DropdownItemTwoComponent } from '../../ui/dropdown/dropdown-item/dropdown-item.component-two';
+import { OauthService } from '../../../../services/auth/oauth.service'; 
 
 @Component({
   selector: 'app-user-dropdown',
+  standalone: true,
+  imports: [
+    CommonModule, 
+    RouterModule
+  ],
   templateUrl: './user-dropdown.component.html',
-  imports:[CommonModule,RouterModule,DropdownComponent,DropdownItemTwoComponent]
 })
 export class UserDropdownComponent {
+  private oauthService = inject(OauthService);
   isOpen = false;
 
-  toggleDropdown() {
+  // Método para alternar la visualización del menú
+  toggleDropdown(): void {
     this.isOpen = !this.isOpen;
   }
 
-  closeDropdown() {
+  // Método para cerrar el menú explícitamente
+  closeDropdown(): void {
     this.isOpen = false;
+  }
+
+  // Método que se ejecuta al dar clic en "Cerrar Sesión"
+  onLogoutClick(): void {
+    console.log('Ejecutando CU-08: Destruyendo sesión activa...');
+    this.closeDropdown(); 
+    this.oauthService.logout();
   }
 }
