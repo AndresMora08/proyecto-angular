@@ -56,6 +56,7 @@ export class NeighborhoodManagementComponent implements OnInit {
   tableActions: TableAction[] = [
     { name: 'edit', label: 'Editar', customClass: 'text-blue-500 hover:bg-blue-50' },
     { name: 'map', label: 'Demarcar', customClass: 'text-green-600 hover:bg-green-50' },
+    { name: 'editPolygon', label: 'Editar polígono', customClass: 'text-emerald-700 hover:bg-emerald-50' },
     { name: 'delete', label: 'Eliminar', customClass: 'text-red-500 hover:bg-red-50' }
   ];
 
@@ -69,6 +70,7 @@ export class NeighborhoodManagementComponent implements OnInit {
   // Estado para abrir el mapa de demarcación (CU-09)
   isMapOpen: boolean = false;
   selectedNeighborhoodForMap: any = null;
+  mapMode: 'create' | 'edit' = 'create';
 
   ngOnInit(): void {
     this.loadInitialData();
@@ -195,8 +197,33 @@ export class NeighborhoodManagementComponent implements OnInit {
     } 
     else if (event.actionName === 'map') {
       // Abrir modal/mapa para demarcación (CU-09)
-      this.selectedNeighborhoodForMap = item;
-      this.isMapOpen = true;
+      this.openMapModal(item, 'create');
+    }
+    else if (event.actionName === 'editPolygon') {
+      if (!item.id_neighborhood) return;
+
+      // Precondición CU-10: el barrio debe tener un polígono guardado
+      this.pointService.search({ id_neighborhood: item.id_neighborhood }).subscribe({
+        next: (res: any) => {
+          const points = this.extractPoints(res);
+          if (points.length === 0) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Sin polígono para editar',
+              text: 'Este barrio no tiene puntos guardados. Usa "Demarcar" para crearlo primero.'
+            });
+            return;
+          }
+          this.openMapModal(item, 'edit');
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'No se pudo validar el polígono',
+            text: 'Intenta nuevamente en unos segundos.'
+          });
+        }
+      });
     }
     else if (event.actionName === 'delete') {
       if (!item.id_neighborhood) return;
@@ -266,6 +293,23 @@ export class NeighborhoodManagementComponent implements OnInit {
   onMapClose(changed: boolean) {
     this.isMapOpen = false;
     this.selectedNeighborhoodForMap = null;
+    this.mapMode = 'create';
     if (changed) this.loadInitialData();
+  }
+
+  private openMapModal(item: any, mode: 'create' | 'edit'): void {
+    this.selectedNeighborhoodForMap = item;
+    this.mapMode = mode;
+    this.isMapOpen = true;
+  }
+
+  private extractPoints(res: any): any[] {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.results)) return res.results;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.items)) return res.items;
+    if (Array.isArray(res?.points)) return res.points;
+    if (Array.isArray(res?.rows)) return res.rows;
+    return [];
   }
 }

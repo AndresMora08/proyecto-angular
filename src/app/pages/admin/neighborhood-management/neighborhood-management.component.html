@@ -122,5 +122,5 @@
     </div>
 
   </div>
-  <app-neighborhood-map *ngIf="isMapOpen" [neighborhood]="selectedNeighborhoodForMap" (close)="onMapClose($event)"></app-neighborhood-map>
+  <app-neighborhood-map *ngIf="isMapOpen" [neighborhood]="selectedNeighborhoodForMap" [mode]="mapMode" (close)="onMapClose($event)"></app-neighborhood-map>
 </div>

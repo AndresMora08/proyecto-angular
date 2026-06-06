@@ -17,6 +17,7 @@ import * as L from 'leaflet';
 })
 export class NeighborhoodMapComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() neighborhood: any | null = null;
+  @Input() mode: 'create' | 'edit' = 'create';
   @Output() close = new EventEmitter<boolean>();
 
   map: any = null;
@@ -115,6 +116,12 @@ export class NeighborhoodMapComponent implements OnInit, AfterViewInit, OnDestro
     this.renderPoints();
   }
 
+  removePointAt(index: number): void {
+    if (index < 0 || index >= this.points.length) return;
+    this.points.splice(index, 1);
+    this.renderPoints();
+  }
+
   savePoints(): void {
     // validar mínimo de puntos para formar polígono
     if (this.points.length < 3) {
@@ -204,6 +211,11 @@ export class NeighborhoodMapComponent implements OnInit, AfterViewInit, OnDestro
       return backendMessage;
     }
     return 'No fue posible guardar los puntos del barrio.';
+  }
+
+  get modalTitle(): string {
+    const baseName = this.neighborhood?.name || 'Sin nombre';
+    return this.mode === 'edit' ? `Editar Polígono: ${baseName}` : `Demarcar Barrio: ${baseName}`;
   }
 
   cancel(): void {
