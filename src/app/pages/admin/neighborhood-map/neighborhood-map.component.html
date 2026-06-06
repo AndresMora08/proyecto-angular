@@ -1,0 +1,18 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" (click)="cancel()"></div>
+  <div class="relative bg-white rounded-lg shadow-lg w-[90%] max-w-4xl p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold">Demarcar Barrio: {{ neighborhood?.name || 'Sin nombre' }}</h3>
+      <div class="flex gap-2">
+        <button class="px-3 py-1 rounded bg-slate-100" (click)="removeLastPoint()">Deshacer</button>
+        <button class="px-3 py-1 rounded bg-slate-100" (click)="clearPoints()">Limpiar</button>
+        <button class="px-3 py-1 rounded bg-green-600 text-white" (click)="savePoints()">Guardar</button>
+        <button class="px-3 py-1 rounded bg-red-500 text-white" (click)="cancel()">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="neighborhood-map-canvas" style="height:520px; width:100%; border-radius:8px; overflow:hidden;"></div>
+
+    <p class="text-xs text-slate-500 mt-2">Haz clic en el mapa para agregar puntos. Necesitas al menos 3 puntos para formar un polígono.</p>
+  </div>
+</div>

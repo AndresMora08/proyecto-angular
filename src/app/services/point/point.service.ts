@@ -31,7 +31,7 @@ export class PointService {
     return this.http.get<any>(`${this.url}/search`, { params });
   }
 
-  create(point: Point): Observable<Point> {
+  create(point: Partial<Point>): Observable<Point> {
     return this.http.post<Point>(this.url, point);
   }
 

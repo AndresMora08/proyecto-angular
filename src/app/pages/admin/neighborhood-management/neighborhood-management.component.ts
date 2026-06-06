@@ -10,6 +10,7 @@ import { AnnotationService } from '../../../services/annotation/annotation.servi
 
 import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 import { GenericSearchComponent } from '../../../components/ui/search/generic-search/generic-search.component';
+import { NeighborhoodMapComponent } from '../neighborhood-map/neighborhood-map.component';
 
 import { Neighborhood } from '../../../models/Neighborhood';
 import { Commune } from '../../../models/Commune';
@@ -24,7 +25,8 @@ import Swal from 'sweetalert2';
     CommonModule,
     FormsModule,
     GenericTableComponent,
-    GenericSearchComponent
+    GenericSearchComponent,
+    NeighborhoodMapComponent
   ],
   templateUrl: './neighborhood-management.component.html',
   styleUrl: './neighborhood-management.component.css'
@@ -53,6 +55,7 @@ export class NeighborhoodManagementComponent implements OnInit {
 
   tableActions: TableAction[] = [
     { name: 'edit', label: 'Editar', customClass: 'text-blue-500 hover:bg-blue-50' },
+    { name: 'map', label: 'Demarcar', customClass: 'text-green-600 hover:bg-green-50' },
     { name: 'delete', label: 'Eliminar', customClass: 'text-red-500 hover:bg-red-50' }
   ];
 
@@ -62,6 +65,10 @@ export class NeighborhoodManagementComponent implements OnInit {
     private pointService: PointService,
     private annotationService: AnnotationService
   ) {}
+
+  // Estado para abrir el mapa de demarcación (CU-09)
+  isMapOpen: boolean = false;
+  selectedNeighborhoodForMap: any = null;
 
   ngOnInit(): void {
     this.loadInitialData();
@@ -186,6 +193,11 @@ export class NeighborhoodManagementComponent implements OnInit {
       };
       this.isFormOpen = true;
     } 
+    else if (event.actionName === 'map') {
+      // Abrir modal/mapa para demarcación (CU-09)
+      this.selectedNeighborhoodForMap = item;
+      this.isMapOpen = true;
+    }
     else if (event.actionName === 'delete') {
       if (!item.id_neighborhood) return;
 
@@ -248,5 +260,12 @@ export class NeighborhoodManagementComponent implements OnInit {
 
   private toastSuccess(title: string, text: string): void {
     Swal.fire({ icon: 'success', title, text, timer: 1800, showConfirmButton: false });
+  }
+
+  // Handler para cerrar el mapa y recargar datos si hubo cambios
+  onMapClose(changed: boolean) {
+    this.isMapOpen = false;
+    this.selectedNeighborhoodForMap = null;
+    if (changed) this.loadInitialData();
   }
 }
