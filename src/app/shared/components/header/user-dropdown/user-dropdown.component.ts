@@ -1,7 +1,8 @@
 import { Component, inject } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { OauthService } from '../../../../services/auth/oauth.service'; 
+// 1. Cambiamos la importación al nuevo servicio de seguridad
+import { SecurityService } from '../../../../services/auth/oauth.service'; 
 
 @Component({
   selector: 'app-user-dropdown',
@@ -13,7 +14,8 @@ import { OauthService } from '../../../../services/auth/oauth.service';
   templateUrl: './user-dropdown.component.html',
 })
 export class UserDropdownComponent {
-  private oauthService = inject(OauthService);
+  // 2. Inyectamos SecurityService en lugar de OauthService
+  private securityService = inject(SecurityService);
   isOpen = false;
 
   // Método para alternar la visualización del menú
@@ -28,8 +30,17 @@ export class UserDropdownComponent {
 
   // Método que se ejecuta al dar clic en "Cerrar Sesión"
   onLogoutClick(): void {
-    console.log('Ejecutando CU-08: Destruyendo sesión activa...');
+    console.log('Ejecutando CU-08: Destruyendo sesión activa con Firebase...');
     this.closeDropdown(); 
-    this.oauthService.logout();
+    // 3. Llamamos al método logout() de nuestro nuevo servicio
+    this.securityService.logout();
+  }
+
+  /**
+   * 💡 Opcional: Si en tu HTML (user-dropdown.component.html) necesitas 
+   * mostrar el nombre o correo del usuario logueado, puedes usar este getter:
+   */
+  get currentUser(): any {
+    return this.securityService.getCurrentUser();
   }
 }
