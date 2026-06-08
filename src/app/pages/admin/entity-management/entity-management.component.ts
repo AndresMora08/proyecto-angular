@@ -127,10 +127,10 @@ export class EntityManagementComponent implements OnInit {
         cancelButtonText: 'Cancelar'
       }).then((result) => {
         if (result.isConfirmed) {
-          let id = entityItem.id || (entityItem as any).id_entity;
+          let id = entityItem.id_entity || (entityItem as any).id_entity;
           if (!id) {
             const original = this.entities.find(e => e.nit === entityItem.nit || e.name === entityItem.name);
-            id = original?.id || (original as any)?.id_entity;
+            id = original?.id_entity || (original as any)?.id_entity;
           }
 
           if (id) {
@@ -190,14 +190,14 @@ export class EntityManagementComponent implements OnInit {
       });
     } 
     else if (this.viewMode === 'edit') {
-      let id = this.activeRowEntity?.id || (this.activeRowEntity as any)?.id_entity || (this.activeRowEntity as any)?.entity_id;
+      let id = this.activeRowEntity?.id_entity || (this.activeRowEntity as any)?.id_entity || (this.activeRowEntity as any)?.entity_id;
       
       if (!id && this.activeRowEntity) {
         const matchOriginal = this.entities.find(e => 
           String(e.nit).trim() === String(this.activeRowEntity!.nit).trim() || 
           String(e.name).trim().toLowerCase() === String(this.activeRowEntity!.name).trim().toLowerCase()
         );
-        id = matchOriginal?.id || (matchOriginal as any)?.id_entity;
+        id = matchOriginal?.id_entity || (matchOriginal as any)?.id_entity;
       }
 
       console.log('ID resuelto para enviar a la API de Flask:', id);

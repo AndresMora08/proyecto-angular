@@ -1,19 +1,23 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // <-- NUEVO: Importación necesaria para standalone
+import { FormsModule } from '@angular/forms'; 
 import { OfficialService } from '../../../services/official/official.service';
+import { EntityService } from '../../../services/entity/entity.service';
 import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 import { GenericFormComponent } from '../../../components/ui/form/generic-form/generic-form.component';
 import { GenericSearchComponent } from '../../../components/ui/search/generic-search/generic-search.component';
 import { Official } from '../../../models/Official';
+import { Entity } from '../../../models/Entity';
+import { TableAction, TableActionEvent } from '../../../models/components/Table';
 import { FormField } from '../../../models/components/Form';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-staff-management',
   standalone: true,
   imports: [
     CommonModule, 
-    FormsModule, // <-- NUEVO: Agregado aquí
+    FormsModule, 
     GenericTableComponent, 
     GenericFormComponent, 
     GenericSearchComponent
@@ -22,49 +26,244 @@ import { FormField } from '../../../models/components/Form';
   styleUrl: './staff-management.component.css'
 })
 export class StaffManagementComponent implements OnInit {
-  viewMode: 'list'|'create'|'edit' = 'list';
+  viewMode: 'list' | 'create' | 'edit' = 'list';
+  
   funcionarios: Official[] = [];
+  filteredFuncionarios: Official[] = [];
+  entidades: Entity[] = [];
+  
   selected: any = {};
   searchTerm: string = '';
+  selectedEntityFilter: string = '';
 
-  tableColumns = ['name','email','role','phone'];
+  tableColumns = ['id_entity', 'name', 'email', 'role', 'phone', 'status'];
 
-  formFields: FormField[] = [
-    { name: 'name', label: 'Nombre', type: 'text' as const, required: true },
-    { name: 'email', label: 'Correo', type: 'email' as const, required: true },
-    { name: 'role', label: 'Cargo / Rol', type: 'text' as const, required: true },
-    { name: 'cellphone', label: 'Celular', type: 'text' as const, required: false }
+  tableActions: TableAction[] = [
+    { 
+      name: 'edit', 
+      label: 'Editar', 
+      customClass: 'text-blue-500 hover:bg-blue-50 border-blue-200 dark:hover:bg-blue-900/20' 
+    },
+    { 
+      name: 'delete', 
+      label: 'Eliminar', 
+      customClass: 'text-red-500 hover:bg-red-50 border-red-200 dark:hover:bg-red-900/20' 
+    }
   ];
 
-  constructor(private officialService: OfficialService) {}
+  formFields: FormField[] = [
+    { 
+      name: 'id_entity', 
+      label: 'Entidad Asociada', 
+      type: 'select', 
+      required: true,
+      options: []
+    },
+    { name: 'name', label: 'Nombre Completo', type: 'text', required: true },
+    { name: 'email', label: 'Correo Electrónico', type: 'email', required: true },
+    { name: 'role', label: 'Cargo / Rol asignado', type: 'text', required: true },
+    { name: 'phone', label: 'Número de Celular', type: 'text', required: true },
+    { 
+      name: 'status', 
+      label: 'Estado del Funcionario', 
+      type: 'select', 
+      required: true,
+      options: ['active', 'inactive']
+    }
+  ];
+
+  constructor(
+    private officialService: OfficialService,
+    private entityService: EntityService
+  ) {}
 
   ngOnInit(): void {
+    this.loadEntidades();
     this.loadFuncionarios();
+  }
+
+  loadEntidades(): void {
+    this.entityService.getAll().subscribe({
+      next: (data) => {
+        this.entidades = data || [];
+        const entityNames = this.entidades.map(e => e.name);
+        const entityField = this.formFields.find(f => f.name === 'id_entity');
+        if (entityField) {
+          entityField.options = entityNames;
+        }
+      },
+      error: (err) => console.error("❌ Error al cargar entidades:", err)
+    });
   }
 
   loadFuncionarios(): void {
     this.officialService.getAll().subscribe({
-      next: (data) => this.funcionarios = data || [],
-      error: () => this.funcionarios = []
+      next: (data) => {
+        console.log("👤 Officials de la DB:", data);
+        this.funcionarios = data || [];
+        this.applyFilters();
+      },
+      error: (err) => {
+        console.error("❌ Error al cargar funcionarios:", err);
+        this.funcionarios = [];
+        this.filteredFuncionarios = [];
+      }
     });
   }
 
-  showCreate() { this.viewMode = 'create'; this.selected = {}; }
-  backToList() { this.viewMode = 'list'; this.selected = {}; this.loadFuncionarios(); }
+  onSearchTermChange(value: string): void {
+    this.searchTerm = value;
+    this.applyFilters();
+  }
 
-  handleFormSubmit(payload: any) {
+  applyFilters(): void {
+    this.filteredFuncionarios = this.funcionarios.filter(f => {
+      const matchesSearch = !this.searchTerm ? true : 
+        (f.name && f.name.toLowerCase().includes(this.searchTerm.toLowerCase())) || 
+        (f.email && f.email.toLowerCase().includes(this.searchTerm.toLowerCase()));
+      
+      const matchesEntity = !this.selectedEntityFilter ? true : 
+        f.id_entity === Number(this.selectedEntityFilter);
+
+      return matchesSearch && matchesEntity;
+    });
+  }
+
+  showCreate() { 
+    this.viewMode = 'create'; 
+    this.selected = { status: 'active' }; 
+  }
+
+  backToList() { 
+    this.viewMode = 'list'; 
+    this.selected = {}; 
+    this.loadFuncionarios(); 
+  }
+
+  handleFormSubmit(payload: any): void {
+    console.log("➡️ Payload crudo recibido del formulario:", payload);
+
+    // Encontrar la entidad real basada en el nombre seleccionado en el formulario genérico
+    const entidadSeleccionada = this.entidades.find(e => e.name === payload.id_entity);
+    const idEntityResuelto = entidadSeleccionada ? entidadSeleccionada.id_entity : null;
+
+    // 🛠️ MAPEADO EXPLÍCITO SEGURO: Evita arrastrar propiedades erróneas o duplicar el id_entity en el ID del funcionario.
+    const processedPayload: Official = {
+      id_entity: Number(idEntityResuelto),
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      role: payload.role,
+      status: payload.status,
+      last_latitude: this.selected?.last_latitude || 5.096,
+      last_longitude: this.selected?.last_longitude || -75.515,
+      last_gps_update: this.selected?.last_gps_update || null,
+      gps_active: this.selected?.gps_active !== undefined ? this.selected.gps_active : true
+    };
+
     if (this.viewMode === 'create') {
-      this.officialService.create(payload).subscribe(() => this.backToList(), () => this.backToList());
+      // ⚠️ Al crear, eliminamos explícitamente cualquier clave de ID para que el Backend autoincremente solo
+      delete processedPayload.id_official;
+
+      this.officialService.checkEmailExists(processedPayload.email).subscribe({
+        next: (exists) => {
+          if (exists) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Conflictos de Registro',
+              text: 'El correo electrónico ingresado ya se encuentra registrado previamente en el sistema.',
+              confirmButtonColor: '#ef4444'
+            });
+          } else {
+            this.officialService.create(processedPayload).subscribe({
+              next: () => {
+                Swal.fire('¡Creado!', 'Funcionario creado y asignado con éxito.', 'success');
+                this.backToList();
+              },
+              error: (err) => {
+                console.error("❌ Error en la creación del funcionario:", err);
+                Swal.fire('Error', 'No se pudo guardar el registro en el servidor.', 'error');
+              }
+            });
+          }
+        }
+      });
+
     } else if (this.viewMode === 'edit') {
-      const id = this.selected?.id;
-      if (id) this.officialService.update(id, payload).subscribe(() => this.backToList(), () => this.backToList());
+      // 🔄 Recuperamos estrictamente el ID del funcionario original seleccionado para la edición
+      const idOfficial = this.selected?.id_official || this.selected?.id;
+      
+      if (idOfficial) {
+        // Asignamos el ID correcto al cuerpo de la petición por si la API lo requiere en el body
+        processedPayload.id_official = Number(idOfficial);
+
+        console.log(`✏️ Solicitando actualización en API para ID Funcionario: ${idOfficial}`, processedPayload);
+
+        this.officialService.update(Number(idOfficial), processedPayload).subscribe({
+          next: () => {
+            Swal.fire('¡Actualizado!', 'Datos modificados correctamente.', 'success');
+            this.backToList();
+          },
+          error: (err) => {
+            console.error("❌ Error al actualizar el funcionario:", err);
+            Swal.fire('Error', 'No se pudieron guardar los cambios en el servidor.', 'error');
+          }
+        });
+      } else {
+        Swal.fire('Error de Identificador', 'No se detectó un id_official válido para actualizar este registro.', 'error');
+      }
     }
   }
 
-  handleTableAction(event: any) {
+  handleTableAction(event: TableActionEvent): void {
     if (event.actionName === 'edit') {
-      this.selected = { ...event.item };
+      const itemClone = { ...event.item };
+
+      const entidadAsociada = this.entidades.find(e => Number(e.id_entity) === Number(itemClone['id_entity']));
+      if (entidadAsociada) {
+        itemClone['id_entity'] = entidadAsociada.name;
+      }
+
+      this.selected = itemClone;
       this.viewMode = 'edit';
+      console.log("Selected item mapeado para edición:", this.selected);
+    } else if (event.actionName === 'delete') {
+      this.confirmDeleteOfficial(event.item);
     }
+  }
+
+  confirmDeleteOfficial(official: any): void {
+    if (official.hasAnnotations || official.hasDemarcations) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Operación Denegada',
+        text: 'No es posible eliminar al funcionario debido a que cuenta con anotaciones o demarcaciones territoriales asociadas.',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: '¿Confirmas la eliminación?',
+      text: `Esta acción removerá definitivamente a ${official.name} de la plataforma.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const id = official.id_official || official.id;
+        if (id) {
+          this.officialService.delete(Number(id)).subscribe({
+            next: () => {
+              Swal.fire('Eliminado', 'El registro ha sido removido.', 'success');
+              this.loadFuncionarios();
+            },
+            error: (err) => console.error("❌ Error al eliminar:", err)
+          });
+        }
+      }
+    });
   }
 }

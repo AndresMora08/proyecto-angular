@@ -19,8 +19,9 @@ export class EntityService {
     return this.http.get<any>(this.url, { params });
   }
 
-  getById(id: number): Observable<Entity> {
-    return this.http.get<Entity>(`${this.url}/${id}`);
+  // 🔄 CORREGIDO: Usa id_entity de forma estricta
+  getById(id_entity: number): Observable<Entity> {
+    return this.http.get<Entity>(`${this.url}/${id_entity}`);
   }
 
   search(q: string): Observable<any> {
@@ -32,12 +33,14 @@ export class EntityService {
     return this.http.post<Entity>(this.url, this.toFormData(entity));
   }
 
-  update(id: number, entity: Entity): Observable<Entity> {
-    return this.http.put<Entity>(`${this.url}/${id}`, this.toFormData(entity));
+  // 🔄 CORREGIDO: Usa id_entity de forma estricta
+  update(id_entity: number, entity: Entity): Observable<Entity> {
+    return this.http.put<Entity>(`${this.url}/${id_entity}`, this.toFormData(entity));
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  // 🔄 CORREGIDO: Usa id_entity de forma estricta
+  delete(id_entity: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id_entity}`);
   }
 
   getLogoUrl(logoName: string): string {
@@ -48,7 +51,11 @@ export class EntityService {
   private toFormData(entity: Entity): FormData {
     const fd = new FormData();
     
-    // CORREGIDO: Mapeo estricto e idéntico a las columnas estructurales recibidas del Backend
+    // 🔄 CORREGIDO: Si existe id_entity (en actualizaciones), se adjunta al FormData
+    if (entity.id_entity) {
+      fd.append('id_entity', entity.id_entity.toString());
+    }
+
     fd.append('name', entity.name || '');
     fd.append('nit', entity.nit || '');
     fd.append('phone', entity.phone || '');
@@ -56,10 +63,12 @@ export class EntityService {
     fd.append('address', entity.address || '');
     fd.append('status', entity.status || 'active');
     
+    if (entity.description) {
+      fd.append('description', entity.description);
+    }
     if (entity.logo_url) {
       fd.append('logo_url', entity.logo_url);
     }
-    
     if (entity.file) {
       fd.append('file', entity.file);
     }
