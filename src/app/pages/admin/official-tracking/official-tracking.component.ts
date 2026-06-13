@@ -5,14 +5,13 @@ import { takeUntil } from 'rxjs/operators';
 import { TrackingService, OfficialLocation } from '../../../services/tracking-service/tracking.service';
 import { EntityService } from '../../../services/entity/entity.service';
 import { MapService } from '../../../services/map/map.service';
-import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 
 @Component({
   selector: 'app-official-tracking',
   templateUrl: './official-tracking.component.html',
   styleUrls: ['./official-tracking.component.scss'],
   standalone: true,
-  imports: [CommonModule, GenericTableComponent]
+  imports: [CommonModule]
 })
 export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -22,10 +21,15 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
   
   allOfficials: OfficialLocation[] = [];
   filteredOfficials: any[] = [];
-  showEmptyStateMessage: boolean = false;
+  searchTerm: string = '';
+  
+  // Variables para la sección de métricas numéricas
+  activeCount: number = 0;
+  inactiveCount: number = 0;
+  totalCount: number = 0;
 
-  // SOLUCIÓN AL ERROR TS2322: Ahora es un string[] con las llaves exactas del objeto
-  tableColumns: string[] = ['id_official', 'name', 'status_text'];
+  // Fecha y hora de última actualización
+  lastUpdateStr: string = '--/--/---- --:--:--';
 
   constructor(
     private trackingService: TrackingService,
@@ -35,6 +39,7 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnInit(): void {
     this.loadEntities();
+    this.updateTimestamp();
   }
 
   ngAfterViewInit(): void {
@@ -63,39 +68,71 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
       .subscribe({
         next: (locations: OfficialLocation[]) => {
           this.allOfficials = locations;
-          this.applyFilter();
+          this.calculateMetrics();
+          this.applyFilterAndSearch();
+          this.updateTimestamp();
         }
       });
+  }
+
+  // Calcula los números globales solicitados para el panel superior
+  private calculateMetrics(): void {
+    this.totalCount = this.allOfficials.length;
+    this.activeCount = this.allOfficials.filter(f => f.is_online).length;
+    this.inactiveCount = this.totalCount - this.activeCount;
+  }
+
+  private updateTimestamp(): void {
+    const now = new Date();
+    this.lastUpdateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
   }
 
   onEntityChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     this.selectedEntityId = target.value ? Number(target.value) : null;
-    this.applyFilter();
+    this.applyFilterAndSearch();
   }
 
-  private applyFilter(): void {
-    let rawFiltered = [];
-    if (!this.selectedEntityId) {
-      rawFiltered = this.allOfficials;
-    } else {
-      rawFiltered = this.allOfficials.filter(f => f.id_entity === this.selectedEntityId);
+  // Captura el texto del input de búsqueda
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchTerm = target.value.toLowerCase();
+    this.applyFilterAndSearch();
+  }
+
+  // Ejecuta la actualización manual solicitada
+  manualRefresh(): void {
+    this.updateTimestamp();
+    this.applyFilterAndSearch();
+    // Aquí puedes llamar una recarga forzada del backend si tu servicio lo permite
+  }
+
+  private applyFilterAndSearch(): void {
+    let result = this.allOfficials;
+
+    // 1. Filtrar por Entidad
+    if (this.selectedEntityId) {
+      result = result.filter(f => f.id_entity === this.selectedEntityId);
     }
 
-    this.showEmptyStateMessage = this.selectedEntityId !== null && rawFiltered.length === 0;
+    // 2. Filtrar por Buscador (Nombre)
+    if (this.searchTerm.trim() !== '') {
+      result = result.filter(f => f.name.toLowerCase().includes(this.searchTerm));
+    }
 
-    this.filteredOfficials = rawFiltered.map(official => ({
+    // Mapeamos los datos simulando o formateando la dirección/ubicación y fotos
+    this.filteredOfficials = result.map(official => ({
       ...official,
-      id_official: official.id_official,
-      name: official.name,
-      status_text: official.is_online ? '🟢 En línea' : '🔴 Desconectado'
+      // Si el backend no tiene dirección exacta, mostramos coordenadas legibles o fallback como pide el CU
+      address: (official as any).address || `Sector Central (Lat: ${official.latitude.toFixed(4)}, Lng: ${official.longitude.toFixed(4)})`,
+      avatar_url: (official as any).avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(official.name)}&background=0D8ABC&color=fff`
     }));
 
     this.renderMarkers();
   }
 
-  onRowSelected(row: any): void {
-    this.mapService.selectOfficialOnMap(row.id_official, row.latitude, row.longitude);
+  focusOfficial(official: any): void {
+    this.mapService.selectOfficialOnMap(official.id_official, official.latitude, official.longitude);
   }
 
   private renderMarkers(): void {
@@ -107,7 +144,7 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
             <h4 class="font-bold text-xs text-slate-900">${official.name}</h4>
           </div>
           <p class="text-[11px] text-slate-500">
-            <b>Estado:</b> ${official.status_text}
+            <b>Dirección:</b> ${official.address}
           </p>
         </div>
       `;
@@ -116,7 +153,7 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
         official.latitude,
         official.longitude,
         popupContent,
-        official.status_text.includes('🟢'),
+        official.is_online,
         official.name
       );
     });
