@@ -1,17 +1,18 @@
 import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TrackingService, OfficialLocation } from '../../../services/tracking-service/tracking.service';
 import { EntityService } from '../../../services/entity/entity.service';
 import { MapService } from '../../../services/map/map.service';
+import { GenericTableComponent } from '../../../components/ui/table/generic-table/generic-table.component';
 
 @Component({
   selector: 'app-official-tracking',
   templateUrl: './official-tracking.component.html',
   styleUrls: ['./official-tracking.component.scss'],
   standalone: true,
-  imports: [DecimalPipe]
+  imports: [CommonModule, GenericTableComponent]
 })
 export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -20,8 +21,11 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
   selectedEntityId: number | null = null;
   
   allOfficials: OfficialLocation[] = [];
-  filteredOfficials: OfficialLocation[] = [];
+  filteredOfficials: any[] = [];
   showEmptyStateMessage: boolean = false;
+
+  // SOLUCIÓN AL ERROR TS2322: Ahora es un string[] con las llaves exactas del objeto
+  tableColumns: string[] = ['id_official', 'name', 'status_text'];
 
   constructor(
     private trackingService: TrackingService,
@@ -71,51 +75,48 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private applyFilter(): void {
+    let rawFiltered = [];
     if (!this.selectedEntityId) {
-      this.filteredOfficials = this.allOfficials;
+      rawFiltered = this.allOfficials;
     } else {
-      this.filteredOfficials = this.allOfficials.filter(
-        f => f.id_entity === this.selectedEntityId
-      );
+      rawFiltered = this.allOfficials.filter(f => f.id_entity === this.selectedEntityId);
     }
-    this.showEmptyStateMessage = this.selectedEntityId !== null && this.filteredOfficials.length === 0;
+
+    this.showEmptyStateMessage = this.selectedEntityId !== null && rawFiltered.length === 0;
+
+    this.filteredOfficials = rawFiltered.map(official => ({
+      ...official,
+      id_official: official.id_official,
+      name: official.name,
+      status_text: official.is_online ? '🟢 En línea' : '🔴 Desconectado'
+    }));
+
     this.renderMarkers();
   }
 
-  /**
-   * Acción gatillada al hacer clic en un funcionario del panel izquierdo
-   */
-  focusOfficial(official: OfficialLocation): void {
-    this.mapService.selectOfficialOnMap(
-      official.id_official, 
-      official.latitude, 
-      official.longitude
-    );
+  onRowSelected(row: any): void {
+    this.mapService.selectOfficialOnMap(row.id_official, row.latitude, row.longitude);
   }
 
   private renderMarkers(): void {
     this.mapService.clearMarkers();
-
     this.filteredOfficials.forEach(official => {
       const popupContent = `
         <div class="p-2 min-w-[180px]">
           <div class="flex items-center gap-2 border-b border-slate-100 pb-1.5 mb-1.5">
-            <span class="w-2 h-2 rounded-full ${official.is_online ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
             <h4 class="font-bold text-xs text-slate-900">${official.name}</h4>
           </div>
-          <p class="text-[11px] text-slate-500 space-y-0.5">
-            <b>Estado:</b> ${official.is_online ? 'En servicio' : 'Desconectado'}<br>
-            <b>Reporte:</b> ${new Date(official.last_updated).toLocaleTimeString()}
+          <p class="text-[11px] text-slate-500">
+            <b>Estado:</b> ${official.status_text}
           </p>
         </div>
       `;
-
       this.mapService.addOfficialMarker(
         official.id_official,
         official.latitude,
         official.longitude,
         popupContent,
-        official.is_online,
+        official.status_text.includes('🟢'),
         official.name
       );
     });
