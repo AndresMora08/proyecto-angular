@@ -1,0 +1,20 @@
+@reference "tailwindcss";
+
+// Ajustes finos para que los cuadros de información del mapa combinen con Tailwind
+::v-deep .leaflet-popup-content-wrapper {
+  @apply rounded-xl border border-slate-100 shadow-xl font-sans bg-white p-1;
+}
+
+::v-deep .leaflet-popup-tip {
+  @apply bg-white;
+}
+
+// Animación suave para la alerta del flujo alternativo
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}

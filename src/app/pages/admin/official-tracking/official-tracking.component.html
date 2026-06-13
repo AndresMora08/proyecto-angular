@@ -1,0 +1,71 @@
+<div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 space-y-6">
+  
+  <div class="md:flex md:items-center md:justify-between border-b border-slate-200 pb-5">
+    <div class="min-w-0 flex-1">
+      <h2 class="text-2xl font-bold leading-7 text-slate-900 sm:truncate sm:text-3xl sm:tracking-tight">
+        Ubicación de Funcionarios en Tiempo Real
+      </h2>
+      <p class="mt-1 text-sm text-slate-500">
+        CU-11: Panel interactivo de monitoreo y geolocalización satelital del personal en territorio.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:flex md:items-center md:justify-between">
+    
+    <div class="w-full max-w-sm">
+      <label for="entity" class="block text-sm font-medium leading-6 text-slate-900 mb-1.5">
+        Filtrar por Entidad Asignada
+      </label>
+      <select 
+        id="entity" 
+        class="block w-full rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm text-slate-900 transition-colors focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
+        (change)="$event ? onEntityChange($event) : null">
+        <option value="">-- Mostrar Todas las Entidades --</option>
+        @for (entity of entities; track entity.id_entity) {
+          <option [value]="entity.id_entity">
+            {{ entity.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="flex flex-wrap gap-3 pt-2 md:pt-0">
+      <span class="inline-flex items-center gap-x-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        Funcionario Activo (Línea)
+      </span>
+
+      <span class="inline-flex items-center gap-x-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10 opacity-75">
+        <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+        Desconectado / Atenuado (Flujo 4a)
+      </span>
+    </div>
+  </div>
+
+  @if (showEmptyStateMessage) {
+  <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 shadow-sm transition-all animate-fadeIn">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625l6.28-10.875zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 01 speed10 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-amber-800">Sin funcionarios en territorio</h3>
+        <div class="mt-1 text-sm text-amber-700">
+          <p>No se registran funcionarios activos ni reportes de coordenadas recientes vinculados a la entidad seleccionada en este momento.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <div class="relative rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-md overflow-hidden z-10">
+    <div id="map" class="w-full h-[550px] rounded-xl"></div>
+  </div>
+
+</div>

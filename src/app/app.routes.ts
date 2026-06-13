@@ -26,6 +26,7 @@ import { CategoryManagementComponent } from './pages/admin/category-management/c
 import { StaffManagementComponent } from './pages/admin/staff-management/staff-management.component';
 import { CitizenManagementComponent } from './pages/admin/citizen-management/citizen-management.component';
 import { CommuneManagementComponent } from './pages/admin/commune-management/commune-management.component';
+import { OfficialTrackingComponent } from './pages/admin//official-tracking/official-tracking.component';
 // 👈 NUEVA IMPORTACIÓN: GESTIÓN DE BARRIOS (CU-06)
 import { NeighborhoodManagementComponent } from './pages/admin/neighborhood-management/neighborhood-management.component';
 
@@ -159,6 +160,11 @@ export const routes: Routes = [
     path: 'signup',
     component: SignUpComponent,
     title: 'Angular Sign Up Dashboard | TailAdmin - Angular Admin Dashboard Template'
+  },
+  //Mapa interacttivo
+  {
+    path: 'official-tracking',
+    component: OfficialTrackingComponent
   },
   // error pages
   {
