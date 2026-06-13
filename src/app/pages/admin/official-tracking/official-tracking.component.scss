@@ -1,20 +1,21 @@
-@reference "tailwindcss";
-
-// Ajustes finos para que los cuadros de información del mapa combinen con Tailwind
 ::v-deep .leaflet-popup-content-wrapper {
-  @apply rounded-xl border border-slate-100 shadow-xl font-sans bg-white p-1;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background-color: #ffffff;
+  padding: 0.125rem;
 }
 
 ::v-deep .leaflet-popup-tip {
-  @apply bg-white;
+  background-color: #ffffff;
 }
 
-// Animación suave para la alerta del flujo alternativo
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
+  animation: fadeIn 0.25s ease-out forwards;
 }
