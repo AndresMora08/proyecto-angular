@@ -11,6 +11,7 @@ export interface OfficialLocation {
   longitude: number;
   is_online: boolean;
   last_updated: string;
+  avatar: string;
 }
 
 @Injectable({
@@ -24,7 +25,11 @@ export class TrackingService {
     this.socket = io(socketUrl, {
       transports: ['polling'],
       upgrade: false,
-      autoConnect: true
+      autoConnect: true,
+      forceNew: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+      closeOnBeforeunload: true
     });
   }
   getOfficialLocationsStream(): Observable<any> {

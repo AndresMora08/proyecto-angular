@@ -49,7 +49,7 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
 }
 
 private loadOfficialsAndInitializeTracking(): void {
-    this.officialService.getAll()
+  this.officialService.getAll()
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: (officials: Official[]) => {
@@ -60,20 +60,12 @@ private loadOfficialsAndInitializeTracking(): void {
           latitude: f.last_latitude || 0, 
           longitude: f.last_longitude || 0,
           is_online: false,
-          last_updated: f.last_gps_update || new Date().toISOString()
+          last_updated: f.last_gps_update || new Date().toISOString(),
+          avatar: f.avatar || 'assets/images/default-avatar.png'
         }));
+
         this.calculateMetrics();
         this.applyFilterAndSearch();
-        const rawIds = this.allOfficials.map(f => f.id_official);
-
-        if (rawIds.length > 0) {
-          const trackingRequest: TrackingRequest = { ids: rawIds }; 
-
-          this.officialService.startTracking(trackingRequest).subscribe({
-            next: (res) => console.log('Bucle de simulación del Backend encendido:', res),
-            error: (err) => console.error('Error al encender el tracking en el backend:', err)
-          });
-        }
         this.initRealTimeTracking();
       },
       error: (err) => console.error('Error al precargar funcionarios:', err)
@@ -129,7 +121,8 @@ private loadOfficialsAndInitializeTracking(): void {
                 longitude: update.longitude,
                 is_online: true,
                 id_entity: 0, // Se asignará al actualizar o filtrar
-                last_updated: update.last_gps_update || update.last_updated
+                last_updated: update.last_gps_update || update.last_updated,
+                avatar: update.avatar || 'assets/images/default-avatar.png'
               });
             }
           });

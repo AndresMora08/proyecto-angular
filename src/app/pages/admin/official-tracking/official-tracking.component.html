@@ -119,8 +119,8 @@
           </div>
         </div>
 
-        <div *ngIf="filteredOfficials.length === 0" class="p-8 text-center text-sm text-slate-400">
-          No se encontraron funcionarios correspondientes.
+        <div *ngIf="filteredOfficials.length === 0" class="alert-info">
+          <p>No hay funcionarios activos para la entidad seleccionada.</p>
         </div>
       </div>
     </div>
