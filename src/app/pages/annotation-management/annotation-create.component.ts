@@ -2,141 +2,306 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AnnotationService } from '../../services/annotation/annotation.service';
-import { NeighborhoodService } from '../../services/neighborhood/neighborhood.service';
-// 1. IMPORTANTE: Importa tu tabla genérica (asegúrate de que la ruta sea correcta)
-import { GenericTableComponent } from '../../components/ui/table/generic-table/generic-table.component'; 
 import * as L from 'leaflet';
 import Swal from 'sweetalert2';
 import { Annotation } from '../../models/Annotation';
+import { forkJoin, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+import { environment } from '../../services/environments/environment';
 
 @Component({
   selector: 'app-annotation-create',
   templateUrl: './annotation-create.component.html',
   standalone: true,
-  // 2. IMPORTANTE: Agrega GenericTableComponent a los imports
-  imports: [CommonModule, ReactiveFormsModule, GenericTableComponent]
+  imports: [CommonModule, ReactiveFormsModule]
 })
 export class AnnotationCreateComponent implements OnInit {
   annotationForm!: FormGroup;
-  annotations: Annotation[] = []; // Para la tabla
+  annotations: Annotation[] = []; 
+  selectedFiles: File[] = [];
 
-  // 3. Define las columnas para la tabla genérica
-    public columns: any[] = [
-        { header: 'Descripción', field: 'description' },
-        { header: 'Estado', field: 'status' },
-        { header: 'Latitud', field: 'latitude' },
-        { header: 'Longitud', field: 'longitude' }
-    ];
+  entitiesList = [
+    { id_entity: 1, name: 'Alcaldía Municipal' },
+    { id_entity: 2, name: 'Policía Nacional (CAI)' },
+    { id_entity: 3, name: 'Secretaría de Infraestructura' },
+    { id_entity: 4, name: 'Empresa de Aseo / Aguas' }
+  ];
 
   categories = [
     'Seguridad', 'Infraestructura', 'Vías y tránsito', 'Servicios públicos', 
     'Ambiente', 'Espacio público', 'Residuos', 'Salud', 'Educación', 
     'Movilidad', 'Riesgo', 'Ruido', 'Alumbrado', 'Comercio', 'Otro'
   ];
-  
+
   private map!: L.Map;
-  private marker?: L.Marker;
-  private neighborhoodsLayer!: L.GeoJSON;
+  private currentMarker: L.Marker | null = null;
+  private markers: L.Marker[] = [];
 
   constructor(
     private fb: FormBuilder,
-    private annotationService: AnnotationService,
-    private neighborhoodService: NeighborhoodService
+    private annotationService: AnnotationService
   ) {}
 
   ngOnInit(): void {
     this.initForm();
     this.initMap();
-    this.loadNeighborhoods();
-    this.loadAnnotations(); // Cargamos la tabla
-  }
-
-  // Carga inicial para la tabla
-  loadAnnotations(): void {
-    this.annotationService.getAll().subscribe(data => {
-      this.annotations = data;
-    });
+    this.loadAnnotations();
   }
 
   private initForm(): void {
     this.annotationForm = this.fb.group({
-        description: ['', Validators.required],
-        latitude: [0, Validators.required],
-        longitude: [0, Validators.required],
-        id_neighborhood: [null],
-        id_citizen: [1],
-        // Campos nuevos añadidos para el formulario completo
-        selectedCategories: [[]],
-        entities: [[]],
-        photos: [null]
+      description: ['', Validators.required],
+      latitude: [0, Validators.required],
+      longitude: [0, Validators.required],
+      id_neighborhood: [null],
+      id_citizen: [1],
+      selectedCategories: [[]],
+      entities: [null],
+      photos: [null]
     });
-    }
+  }
 
   private initMap(): void {
-    this.map = L.map('map-annotation').setView([5.0681, -75.5173], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
-    
+    this.map = L.map('map-annotation').setView([5.06889, -75.51738], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
+
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
-      this.annotationForm.patchValue({ latitude: lat, longitude: lng });
-      
-      if (this.marker) this.map.removeLayer(this.marker);
-      this.marker = L.marker([lat, lng]).addTo(this.map);
-      this.validateNeighborhood(lat, lng);
+      this.setMarker(lat, lng);
     });
   }
 
-  private loadNeighborhoods(): void {
-    this.neighborhoodService.getAll().subscribe(data => {
-      this.neighborhoodsLayer = L.geoJSON(data as any).addTo(this.map);
-    });
-  }
+  setMarker(lat: number, lng: number): void {
+    if (this.currentMarker) {
+      this.map.removeLayer(this.currentMarker);
+    }
+    this.currentMarker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+    this.annotationForm.patchValue({ latitude: lat, longitude: lng });
 
-  private validateNeighborhood(lat: number, lng: number): void {
-    let foundId: number | null = null;
-    const point = L.latLng(lat, lng);
-
-    this.neighborhoodsLayer.eachLayer((layer: any) => {
-      if (layer instanceof L.Polygon && layer.getBounds().contains(point)) {
-        foundId = layer.feature?.properties?.id_neighborhood || null;
+    this.currentMarker.on('dragend', () => {
+      if (this.currentMarker) {
+        const position = this.currentMarker.getLatLng();
+        this.annotationForm.patchValue({ latitude: position.lat, longitude: position.lng });
       }
     });
+  }
 
-    if (foundId) {
-      this.annotationForm.patchValue({ id_neighborhood: foundId });
+  resetMarker(): void {
+    if (this.currentMarker) {
+      this.map.removeLayer(this.currentMarker);
+      this.currentMarker = null;
+    }
+    this.annotationForm.patchValue({ latitude: 0, longitude: 0 });
+  }
+
+  toggleCategory(cat: string): void {
+    const current = this.annotationForm.get('selectedCategories')?.value || [];
+    if (current.includes(cat)) {
+      this.annotationForm.patchValue({ selectedCategories: current.filter((c: string) => c !== cat) });
     } else {
-      this.annotationForm.patchValue({ id_neighborhood: null });
-      Swal.fire({
-        title: 'Fuera de zona',
-        text: 'Punto fuera de barrio. ¿Guardar sin barrio?',
-        icon: 'warning',
-        showCancelButton: true
-      }).then((result) => {
-        if (!result.isConfirmed) this.resetMarker();
-      });
+      this.annotationForm.patchValue({ selectedCategories: [...current, cat] });
     }
   }
 
-  public resetMarker(): void {
-    if (this.marker) {
-      this.map.removeLayer(this.marker);
-      this.marker = undefined;
+  onFileSelected(event: any): void {
+    if (event.target.files) {
+      this.selectedFiles = Array.from(event.target.files);
     }
-    this.annotationForm.patchValue({ latitude: 0, longitude: 0, id_neighborhood: null });
+  }
+
+  loadAnnotations(): void {
+    this.annotationService.getAll().subscribe((data: any[]) => {
+      const localCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
+
+      this.annotations = data.map((item: any) => {
+        const id = item.id_annotation;
+        if (id && localCache[id]) {
+          return {
+            ...item,
+            categories: localCache[id].categories || [],
+            entities_text: localCache[id].entities_text || 'Ninguna',
+            evidences: localCache[id].evidences || []
+          };
+        }
+        return { ...item, categories: [], entities_text: 'Ninguna', evidences: [] };
+      });
+
+      this.drawAnnotationsOnMap(this.annotations); 
+    });
+  }
+
+  private drawAnnotationsOnMap(annotations: Annotation[]): void {
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+
+    annotations.forEach(ann => {
+      const categoriesBadge = Array.isArray(ann.categories) && ann.categories.length > 0
+        ? ann.categories.map((c: any) => 
+            `<span style="background-color: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 4px; display: inline-block; margin-top: 4px;">
+              ${c.name}
+            </span>`
+          ).join('')
+        : '<span style="color: #9ca3af; font-size: 11px; font-style: italic;">Sin categorías</span>';
+
+      let imageHtml = '';
+      if (ann.evidences && ann.evidences.length > 0) {
+        const firstEvidence = ann.evidences[0];
+        const imageUrl = firstEvidence.is_local 
+          ? firstEvidence.dataUrl 
+          : `http://127.0.0.1:5000/static/uploads/${firstEvidence.file_url}`;
+
+        imageHtml = `<div style="margin-top: 8px;">
+                      <img src="${imageUrl}" alt="Evidencia" style="width: 100%; max-height: 110px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;"/>
+                     </div>`;
+      } else {
+        imageHtml = `<div style="margin-top: 8px;">
+                      <div style="width: 100%; height: 50px; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #9ca3af; font-size: 10px;">
+                        📷 Sin imagen adjunta
+                      </div>
+                     </div>`;
+      }
+
+      const popupContent = `
+        <div style="font-family: system-ui, sans-serif; width: 220px; padding: 2px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; 
+                         background-color: ${ann.status === 'PENDIENTE' ? '#fef3c7' : '#d1fae5'}; 
+                         color: ${ann.status === 'PENDIENTE' ? '#d97706' : '#065f46'};">
+              ${ann.status}
+            </span>
+          </div>
+          <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: #1f2937; line-height: 1.4;">
+            ${ann.description}
+          </h4>
+          <div style="margin-top: 4px; font-size: 11px; color: #4b5563;">
+            <strong>Entidad:</strong> ${ann.entities_text || 'Ninguna'}
+          </div>
+          <div style="margin-top: 6px; border-top: 1px solid #f3f4f6; padding-top: 4px;">
+            <span style="font-size: 10px; color: #6b7280; font-weight: 500; display: block;">Categorías:</span>
+            ${categoriesBadge}
+          </div>
+          ${imageHtml}
+        </div>
+      `;
+
+      const marker = L.marker([ann.latitude, ann.longitude]).addTo(this.map).bindPopup(popupContent);
+      this.markers.push(marker);
+    });
   }
 
   onSubmit(): void {
-    if (this.annotationForm.invalid) return;
-    const newAnnotation: Annotation = { ...this.annotationForm.value, status: 'PENDIENTE' };
+    if (this.annotationForm.invalid) {
+      Swal.fire('Error', 'Completa los campos obligatorios', 'error');
+      return;
+    }
 
-    this.annotationService.create(newAnnotation).subscribe({
-      next: () => {
-        Swal.fire('Éxito', 'Anotación creada', 'success');
-        this.annotationForm.reset({ id_citizen: 1 });
+    const formValue = this.annotationForm.value;
+    const fileToUpload = this.selectedFiles.length > 0 ? this.selectedFiles[0] : null;
+
+    const annotationPayload = {
+      description: formValue.description,
+      latitude: Number(formValue.latitude),
+      longitude: Number(formValue.longitude),
+      id_neighborhood: formValue.id_neighborhood ? Number(formValue.id_neighborhood) : null,
+      id_citizen: formValue.id_citizen ? Number(formValue.id_citizen) : 1,
+      status: 'PENDIENTE'
+    };
+
+    Swal.fire({
+      title: 'Guardando anotación...',
+      text: 'Registrando datos en el sistema.',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.annotationService.create(annotationPayload as any).pipe(
+      switchMap((createdAnnotation: any) => {
+        const idAnnotation = createdAnnotation.id_annotation;
+        const requests: any[] = [];
+
+        const selectedCats = formValue.selectedCategories || [];
+        selectedCats.forEach((catName: string) => {
+          const localIndex = this.categories.indexOf(catName);
+          const simulatedCategoryId = localIndex !== -1 ? localIndex + 1 : 1;
+          requests.push(
+            this.annotationService['http'].post(`${environment.apiUrl}/annotation-categories`, {
+              id_annotation: idAnnotation,
+              id_category: simulatedCategoryId
+            })
+          );
+        });
+
+        if (formValue.entities && formValue.entities !== 'null') {
+          requests.push(
+            this.annotationService['http'].post(`${environment.apiUrl}/interested-parties`, {
+              id_annotation: idAnnotation,
+              id_entity: Number(formValue.entities)
+            })
+          );
+        }
+
+        if (fileToUpload) {
+          const formData = new FormData();
+          formData.append('file', fileToUpload);
+          formData.append('id_annotation', idAnnotation.toString());
+          formData.append('file_type', fileToUpload.type);
+          formData.append('file_size', fileToUpload.size.toString());
+          formData.append('file_url', fileToUpload.name);
+          requests.push(
+            this.annotationService['http'].post(`${environment.apiUrl}/evidences`, formData)
+          );
+        }
+
+        return requests.length > 0 ? forkJoin(requests).pipe(switchMap(() => of(createdAnnotation))) : of(createdAnnotation);
+      })
+    ).subscribe({
+      next: (createdAnnotation: any) => {
+        const id = createdAnnotation.id_annotation;
+        const selectedEntityObj = this.entitiesList.find(e => e.id_entity === Number(formValue.entities));
+        
+        const categoriesMapped = (formValue.selectedCategories || []).map((name: string) => ({ name }));
+        const entityString = selectedEntityObj ? selectedEntityObj.name : 'Ninguna';
+
+        if (fileToUpload) {
+          const reader = new FileReader();
+          reader.onload = (e: any) => {
+            const metadata = {
+              categories: categoriesMapped,
+              entities_text: entityString,
+              evidences: [{ file_url: fileToUpload.name, dataUrl: e.target.result, is_local: true }]
+            };
+
+            const currentCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
+            currentCache[id] = metadata;
+            localStorage.setItem('annotations_metadata', JSON.stringify(currentCache));
+
+            this.loadAnnotations();
+          };
+          reader.readAsDataURL(fileToUpload);
+        } else {
+          const metadata = {
+            categories: categoriesMapped,
+            entities_text: entityString,
+            evidences: []
+          };
+          const currentCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
+          currentCache[id] = metadata;
+          localStorage.setItem('annotations_metadata', JSON.stringify(currentCache));
+          
+          this.loadAnnotations();
+        }
+
+        Swal.fire('Éxito', 'Anotación creada con éxito en el territorio', 'success');
+        this.annotationForm.reset({ id_citizen: 1, selectedCategories: [], entities: null });
+        this.selectedFiles = [];
         this.resetMarker();
-        this.loadAnnotations(); // Recargamos la tabla después de guardar
       },
-      error: () => Swal.fire('Error', 'No se pudo guardar', 'error')
+      error: (err) => {
+        console.error(err);
+        Swal.fire('Error', 'No se pudo registrar la anotación completa.', 'error');
+      }
     });
   }
 }
