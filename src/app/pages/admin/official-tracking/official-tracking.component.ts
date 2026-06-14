@@ -7,8 +7,6 @@ import { EntityService } from '../../../services/entity/entity.service';
 import { MapService } from '../../../services/map/map.service';
 import { OfficialService } from '../../../services/official/official.service';
 import { Official } from '../../../models/Official';
-import { TrackingRequest } from '../../../models/TrackingRequest';
-
 
 @Component({
   selector: 'app-official-tracking',

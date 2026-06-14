@@ -1,0 +1,66 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Crear anotación</h1>
+    <p class="text-gray-600">Haz clic en el mapa para agregar una anotación en el territorio.</p>
+  </header>
+
+  <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-4 items-center">
+    <select class="border rounded p-2 text-sm"><option>Comuna</option></select>
+    <select class="border rounded p-2 text-sm"><option>Barrio</option></select>
+    <select class="border rounded p-2 text-sm"><option>Categoría</option></select>
+    <button class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded text-sm font-medium">Filtros Avanzados</button>
+  </div>
+
+  <div class="grid grid-cols-10 gap-6">
+    
+    <div class="col-span-7 space-y-4">
+      <div id="map-annotation" class="h-[600px] w-full rounded-xl border-2 border-gray-200 shadow-inner overflow-hidden"></div>
+      
+      <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg flex gap-8">
+        <div><span class="block text-xs font-bold text-blue-600">LATITUD</span> 0.0000</div>
+        <div><span class="block text-xs font-bold text-blue-600">LONGITUD</span> 0.0000</div>
+        <div class="ml-auto text-sm text-blue-800 self-center font-medium">Selección confirmada</div>
+      </div>
+    </div>
+
+    <div class="col-span-3 bg-white p-5 rounded-lg shadow-sm border border-gray-200 h-fit">
+      <form [formGroup]="annotationForm">
+        <h2 class="font-bold mb-4 text-lg">Nueva anotación</h2>
+
+        <div class="grid grid-cols-2 gap-2 mb-4">
+          <input formControlName="latitude" placeholder="Latitud" class="border p-2 rounded text-sm">
+          <input formControlName="longitude" placeholder="Longitud" class="border p-2 rounded text-sm">
+        </div>
+
+        <div class="mb-4">
+          <textarea formControlName="description" class="w-full border p-2 rounded text-sm" rows="3" placeholder="Descripción"></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2">Categorías</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label *ngFor="let cat of categories" class="text-[10px] border p-1 rounded cursor-pointer hover:bg-gray-50 text-center">
+              <input type="checkbox" class="mr-1">{{cat}}
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-4 border-2 border-dashed p-4 text-center rounded">
+          <p class="text-xs text-gray-500">Subir fotografías (Máx 5)</p>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-semibold mb-2">Entidades de interés</label>
+          <select multiple class="w-full border p-2 rounded text-sm h-20">
+            <option *ngFor="let e of entities">{{e.name}}</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button" class="flex-1 border py-2 rounded text-sm">Cancelar</button>
+          <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

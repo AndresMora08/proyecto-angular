@@ -30,6 +30,10 @@ import { OfficialTrackingComponent } from './pages/admin//official-tracking/offi
 // 👈 NUEVA IMPORTACIÓN: GESTIÓN DE BARRIOS (CU-06)
 import { NeighborhoodManagementComponent } from './pages/admin/neighborhood-management/neighborhood-management.component';
 
+// IMPORTACIONES FUNCIONARIO
+import {AnnotationCreateComponent} from './pages/annotation-management/annotation-create.component';
+
+
 export const routes: Routes = [
   {
     path: '',
@@ -147,6 +151,11 @@ export const routes: Routes = [
         path: 'reports',
         component: ReportChatComponent,
         title: 'Reportes Inteligentes'
+      },
+      {
+        path: 'annotation-create',
+        component: AnnotationCreateComponent,
+        title: 'Crear Anotación | Territorial'
       }
     ]
   },
