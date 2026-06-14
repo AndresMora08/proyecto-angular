@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
-import { Observable, Subject } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
 export interface OfficialLocation {
@@ -18,27 +18,24 @@ export interface OfficialLocation {
 })
 export class TrackingService {
   private socket!: Socket;
-  private locationStream$ = new Subject<OfficialLocation[]>();
 
   constructor() {
-    this.connectToSocket();
-  }
-
-  private connectToSocket(): void {
-    const socketUrl = environment.apiUrl || 'http://localhost:5000';
-    
+    const socketUrl = environment.apiUrl || 'http://127.0.0.1:5000';
     this.socket = io(socketUrl, {
-      transports: ['websocket'],
+      transports: ['polling'],
+      upgrade: false,
       autoConnect: true
     });
-
-    // Escucha el canal de actualización que emita tu Flask Backend
-    this.socket.on('official_locations_update', (data: OfficialLocation[]) => {
-      this.locationStream$.next(data);
+  }
+  getOfficialLocationsStream(): Observable<any> {
+    return new Observable(observer => {
+      this.socket.on('official_tracking', (data: { officials: any[] }) => {
+        observer.next(data);
+      });
     });
   }
 
-  getOfficialLocationsStream(): Observable<OfficialLocation[]> {
-    return this.locationStream$.asObservable();
+  emitStartTracking(ids: number[]): void {
+    this.socket.emit('start_tracking', ids);
   }
 }

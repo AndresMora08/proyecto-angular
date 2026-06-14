@@ -5,11 +5,15 @@ import { takeUntil } from 'rxjs/operators';
 import { TrackingService, OfficialLocation } from '../../../services/tracking-service/tracking.service';
 import { EntityService } from '../../../services/entity/entity.service';
 import { MapService } from '../../../services/map/map.service';
+import { OfficialService } from '../../../services/official/official.service';
+import { Official } from '../../../models/Official';
+import { TrackingRequest } from '../../../models/TrackingRequest';
+
 
 @Component({
   selector: 'app-official-tracking',
   templateUrl: './official-tracking.component.html',
-  styleUrls: ['./official-tracking.component.scss'],
+  styleUrls: ['./official-tracking.component.css'],
   standalone: true,
   imports: [CommonModule]
 })
@@ -32,15 +36,49 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
   lastUpdateStr: string = '--/--/---- --:--:--';
 
   constructor(
-    private trackingService: TrackingService,
     private entityService: EntityService,
-    private mapService: MapService
+    private mapService: MapService,
+    private officialService: OfficialService, 
+    private trackingService: TrackingService
   ) {}
 
   ngOnInit(): void {
-    this.loadEntities();
-    this.updateTimestamp();
-  }
+  this.loadEntities();
+  this.updateTimestamp();
+  this.loadOfficialsAndInitializeTracking();
+}
+
+private loadOfficialsAndInitializeTracking(): void {
+    this.officialService.getAll()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (officials: Official[]) => {
+        this.allOfficials = officials.map((f: any) => ({
+          id_official: f.id_official,
+          name: f.name,
+          id_entity: f.id_entity || 0,
+          latitude: f.last_latitude || 0, 
+          longitude: f.last_longitude || 0,
+          is_online: false,
+          last_updated: f.last_gps_update || new Date().toISOString()
+        }));
+        this.calculateMetrics();
+        this.applyFilterAndSearch();
+        const rawIds = this.allOfficials.map(f => f.id_official);
+
+        if (rawIds.length > 0) {
+          const trackingRequest: TrackingRequest = { ids: rawIds }; 
+
+          this.officialService.startTracking(trackingRequest).subscribe({
+            next: (res) => console.log('Bucle de simulación del Backend encendido:', res),
+            error: (err) => console.error('Error al encender el tracking en el backend:', err)
+          });
+        }
+        this.initRealTimeTracking();
+      },
+      error: (err) => console.error('Error al precargar funcionarios:', err)
+    });
+}
 
   ngAfterViewInit(): void {
     this.mapService.initMap('map');
@@ -50,7 +88,11 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.mapService.destroyMap();
+    
+    this.officialService.stopTracking().subscribe({
+      next: () => console.log('Bucle de tracking apagado en el backend de forma limpia.'),
+      error: (err) => console.error('Error al detener el tracking:', err)
+    });
   }
 
   private loadEntities(): void {
@@ -66,12 +108,38 @@ export class OfficialTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.trackingService.getOfficialLocationsStream()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (locations: OfficialLocation[]) => {
-          this.allOfficials = locations;
+        next: (response: { officials: any[] }) => {
+          const updates = response.officials || [];
+
+          // FUSIONAR COORDENADAS: Buscamos el funcionario en nuestra lista local y solo alteramos su posición
+          updates.forEach(update => {
+            const existing = this.allOfficials.find(f => f.id_official === update.id_official);
+            
+            if (existing) {
+              existing.latitude = update.latitude;
+              existing.longitude = update.longitude;
+              existing.last_updated = update.last_gps_update || update.last_updated;
+              existing.is_online = true; // Si vino en el flujo de tracking activo, está en línea
+            } else {
+              // Si por alguna razón el socket envía un ID nuevo que no teníamos mapeado
+              this.allOfficials.push({
+                id_official: update.id_official,
+                name: `Funcionario Especial #${update.id_official}`,
+                latitude: update.latitude,
+                longitude: update.longitude,
+                is_online: true,
+                id_entity: 0, // Se asignará al actualizar o filtrar
+                last_updated: update.last_gps_update || update.last_updated
+              });
+            }
+          });
+
+          // Recalcular métricas y refrescar la capa visual de Tailwind y Leaflet
           this.calculateMetrics();
           this.applyFilterAndSearch();
           this.updateTimestamp();
-        }
+        },
+        error: (err) => console.error('Error en el canal de tracking:', err)
       });
   }
 
