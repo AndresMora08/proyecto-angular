@@ -1,0 +1,144 @@
+<div class="space-y-5">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Mapa territorial</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Anotaciones filtradas por categoria, subcategoria y territorio.</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"
+        (click)="loadData()"
+      >
+        Actualizar
+      </button>
+      <button
+        type="button"
+        class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+        [disabled]="activeFilterCount === 0"
+        (click)="clearFilters()"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
+    {{ errorMessage }}
+  </div>
+
+  <div class="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <aside class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Filtros</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ filteredAnnotations.length }} de {{ annotations.length }} anotaciones</p>
+        </div>
+        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-300">
+          {{ activeFilterCount }} activos
+        </span>
+      </div>
+
+      <div class="space-y-3 border-b border-gray-100 pb-4 dark:border-gray-800">
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Comuna</span>
+          <select
+            class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300"
+            [(ngModel)]="selectedCommuneId"
+            (ngModelChange)="onCommuneChange()"
+          >
+            <option [ngValue]="null">Todas las comunas</option>
+            <option *ngFor="let commune of communes" [ngValue]="commune.id_commune">{{ commune.name }}</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Barrio</span>
+          <select
+            class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300"
+            [(ngModel)]="selectedNeighborhoodId"
+            (ngModelChange)="applyFilters()"
+          >
+            <option [ngValue]="null">Todos los barrios</option>
+            <option *ngFor="let neighborhood of filteredNeighborhoods" [ngValue]="neighborhood.id_neighborhood">{{ neighborhood.name }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Categorias</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400">Conteo por nodo</span>
+        </div>
+
+        <div *ngIf="categoryTree.length === 0 && !loading" class="rounded-lg bg-gray-50 p-3 text-sm text-gray-500 dark:bg-white/5 dark:text-gray-400">
+          No hay categorias disponibles.
+        </div>
+
+        <div class="max-h-[560px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+          <div *ngFor="let category of categoryTree" class="rounded-lg border border-gray-100 bg-gray-50 p-2 dark:border-gray-800 dark:bg-gray-950">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
+                (click)="toggleExpanded(category)"
+                [attr.aria-label]="category.expanded ? 'Contraer categoria' : 'Expandir categoria'"
+              >
+                {{ category.expanded ? '-' : '+' }}
+              </button>
+
+              <label class="flex min-w-0 flex-1 items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500"
+                  [checked]="isCategorySelected(category.id)"
+                  (change)="toggleCategory(category)"
+                />
+                <span class="h-3 w-3 shrink-0 rounded-full" [style.background]="category.color"></span>
+                <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ category.name }}</span>
+              </label>
+
+              <span class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                {{ category.count }}
+              </span>
+            </div>
+
+            <div *ngIf="category.expanded" class="mt-2 space-y-1 pl-9">
+              <div *ngIf="category.children.length === 0" class="text-xs text-gray-400">Sin subcategorias</div>
+              <label *ngFor="let child of category.children" class="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white dark:hover:bg-gray-900">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500"
+                  [checked]="isSubcategorySelected(child.id)"
+                  (change)="toggleSubcategory(child)"
+                />
+                <span class="min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-300">{{ child.name }}</span>
+                <span class="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-900 dark:text-gray-400">{{ child.count }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div class="flex flex-col gap-3 border-b border-gray-100 p-4 dark:border-gray-800 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Anotaciones visibles</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Los marcadores toman el color de su categoria principal.
+          </p>
+        </div>
+
+        <div *ngIf="loading" class="text-sm text-gray-500 dark:text-gray-400">Cargando datos...</div>
+        <div *ngIf="!loading && annotations.length === 0" class="text-sm text-gray-500 dark:text-gray-400">No existen anotaciones registradas.</div>
+        <div *ngIf="!loading && annotations.length > 0 && filteredAnnotations.length === 0" class="text-sm text-warning-700">
+          No hay registros para los filtros seleccionados.
+        </div>
+      </div>
+
+      <div id="territorial-map-canvas" class="h-[680px] min-h-[520px] w-full"></div>
+    </section>
+  </div>
+</div>
