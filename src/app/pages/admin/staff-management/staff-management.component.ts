@@ -10,6 +10,7 @@ import { Official } from '../../../models/Official';
 import { Entity } from '../../../models/Entity';
 import { TableAction, TableActionEvent } from '../../../models/components/Table';
 import { FormField } from '../../../models/components/Form';
+import * as L from 'leaflet';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -72,6 +73,13 @@ export class StaffManagementComponent implements OnInit {
     }
   ];
 
+  // 💡 Mapa de selección de ubicación (mismo patrón usado en CitizenManagementComponent)
+  private map!: L.Map;
+  private currentMarker: L.Marker | null = null;
+
+  private readonly defaultLat = 5.096;
+  private readonly defaultLng = -75.515;
+
   constructor(
     private officialService: OfficialService,
     private entityService: EntityService
@@ -131,13 +139,57 @@ export class StaffManagementComponent implements OnInit {
 
   showCreate() { 
     this.viewMode = 'create'; 
-    this.selected = { status: 'active' }; 
+    this.selected = { 
+      status: 'active',
+      last_latitude: this.defaultLat,
+      last_longitude: this.defaultLng,
+      last_gps_update: null,
+      gps_active: true
+    }; 
+    // Esperamos un tick para que el <div id="map-official"> exista en el DOM antes de inicializar Leaflet
+    setTimeout(() => this.initMap(), 0);
   }
 
   backToList() { 
     this.viewMode = 'list'; 
     this.selected = {}; 
+    this.currentMarker = null;
     this.loadFuncionarios(); 
+  }
+
+  // 💡 Mismo patrón que en AnnotationCreateComponent / CitizenManagementComponent
+  private initMap(): void {
+    const lat = this.selected?.last_latitude || this.defaultLat;
+    const lng = this.selected?.last_longitude || this.defaultLng;
+
+    this.map = L.map('map-official').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    this.setMarker(lat, lng);
+
+    this.map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      this.setMarker(lat, lng);
+    });
+  }
+
+  setMarker(lat: number, lng: number): void {
+    if (this.currentMarker) {
+      this.map.removeLayer(this.currentMarker);
+    }
+    this.currentMarker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+    this.selected.last_latitude = lat;
+    this.selected.last_longitude = lng;
+
+    this.currentMarker.on('dragend', () => {
+      if (this.currentMarker) {
+        const position = this.currentMarker.getLatLng();
+        this.selected.last_latitude = position.lat;
+        this.selected.last_longitude = position.lng;
+      }
+    });
   }
 
   handleFormSubmit(payload: any): void {
@@ -155,8 +207,8 @@ export class StaffManagementComponent implements OnInit {
       phone: payload.phone,
       role: payload.role,
       status: payload.status,
-      last_latitude: this.selected?.last_latitude || 5.096,
-      last_longitude: this.selected?.last_longitude || -75.515,
+      last_latitude: this.selected?.last_latitude ?? this.defaultLat,
+      last_longitude: this.selected?.last_longitude ?? this.defaultLng,
       last_gps_update: this.selected?.last_gps_update || null,
       gps_active: this.selected?.gps_active !== undefined ? this.selected.gps_active : true
     };
@@ -225,8 +277,13 @@ export class StaffManagementComponent implements OnInit {
       }
 
       this.selected = itemClone;
+      if (!this.selected.last_latitude || !this.selected.last_longitude) {
+        this.selected.last_latitude = this.defaultLat;
+        this.selected.last_longitude = this.defaultLng;
+      }
       this.viewMode = 'edit';
       console.log("Selected item mapeado para edición:", this.selected);
+      setTimeout(() => this.initMap(), 0);
     } else if (event.actionName === 'delete') {
       this.confirmDeleteOfficial(event.item);
     }
