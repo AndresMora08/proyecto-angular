@@ -53,12 +53,12 @@
             <button type="button" 
                     *ngFor="let cat of categories" 
                     (click)="toggleCategory(cat)"
-                    [class.bg-indigo-600]="annotationForm.get('selectedCategories')?.value?.includes(cat)"
-                    [class.text-white]="annotationForm.get('selectedCategories')?.value?.includes(cat)"
-                    [class.bg-white]="!annotationForm.get('selectedCategories')?.value?.includes(cat)"
-                    [class.text-gray-700]="!annotationForm.get('selectedCategories')?.value?.includes(cat)"
+                    [class.bg-indigo-600]="annotationForm.get('selectedCategories')?.value?.includes(cat.id_category)"
+                    [class.text-white]="annotationForm.get('selectedCategories')?.value?.includes(cat.id_category)"
+                    [class.bg-white]="!annotationForm.get('selectedCategories')?.value?.includes(cat.id_category)"
+                    [class.text-gray-700]="!annotationForm.get('selectedCategories')?.value?.includes(cat.id_category)"
                     class="text-[10px] border p-2 rounded hover:bg-indigo-50 text-left transition-colors font-semibold shadow-sm truncate">
-              {{ annotationForm.get('selectedCategories')?.value?.includes(cat) ? '✓ ' : '' }}{{ cat }}
+              {{ annotationForm.get('selectedCategories')?.value?.includes(cat.id_category) ? '✓ ' : '' }}{{ cat.name }}
             </button>
           </div>
         </div>
@@ -93,5 +93,3 @@
         </div>
       </form>
     </div> </div> </div> ```
-
-Al reemplazar por completo tu plantilla con esta estructura balanceada, los errores de etiquetas inesperadas (`NG5002`) desaparecerán instantáneamente, el mapa encontrará su contenedor idóneo y el layout se renderizará de forma limpia lado a lado.

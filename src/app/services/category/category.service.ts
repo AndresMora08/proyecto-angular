@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators'; // 💡 Importamos map para transformar lo
 import { environment } from '../environments/environment';
 import { Category } from '../../models/Category';
 
+
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
   private url = `${environment.apiUrl}/categories`;

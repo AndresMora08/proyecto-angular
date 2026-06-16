@@ -4,6 +4,9 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { AnnotationService } from '../../services/annotation/annotation.service';
 import { VoteService } from '../../services/vote/vote.service';
 import { SecurityService } from '../../services/auth/oauth.service';
+// 💡 Importamos tus servicios reales de categorías y entidades
+import { CategoryService } from '../../services/category/category.service';
+import { EntityService } from '../../services/entity/entity.service';
 import { Vote } from '../../models/Vote';
 import * as L from 'leaflet';
 import Swal from 'sweetalert2';
@@ -11,7 +14,6 @@ import { Annotation } from '../../models/Annotation';
 import { forkJoin, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { environment } from '../../services/environments/environment';
-
 
 @Component({
   selector: 'app-annotation-create',
@@ -23,19 +25,10 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   annotationForm!: FormGroup;
   annotations: Annotation[] = []; 
   selectedFiles: File[] = [];
-
-  entitiesList = [
-    { id_entity: 1, name: 'Alcaldía Municipal' },
-    { id_entity: 2, name: 'Policía Nacional (CAI)' },
-    { id_entity: 3, name: 'Secretaría de Infraestructura' },
-    { id_entity: 4, name: 'Empresa de Aseo / Aguas' }
-  ];
-
-  categories = [
-    'Seguridad', 'Infraestructura', 'Vías y tránsito', 'Servicios públicos', 
-    'Ambiente', 'Espacio público', 'Residuos', 'Salud', 'Educación', 
-    'Movilidad', 'Riesgo', 'Ruido', 'Alumbrado', 'Comercio', 'Otro'
-  ];
+  
+  // 💡 Colecciones dinámicas que poblará el Backend
+  entitiesList: any[] = [];
+  categories: any[] = [];
 
   private map!: L.Map;
   private currentMarker: L.Marker | null = null;
@@ -45,13 +38,18 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private annotationService: AnnotationService,
     private voteService: VoteService,
-    private securityService: SecurityService
+    private securityService: SecurityService,
+    // 💡 Inyectamos correctamente ambos servicios en el constructor
+    private categoryService: CategoryService,
+    private entityService: EntityService
   ) {}
 
   ngOnInit(): void {
     this.initForm();
+    this.loadBackendData(); // 💡 Llamamos a la consulta del servidor
     this.loadAnnotations();
   }
+  
   ngAfterViewInit(): void {
     this.initMap();
   }
@@ -63,9 +61,27 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       longitude: [0, Validators.required],
       id_neighborhood: [null],
       id_citizen: [1],
-      selectedCategories: [[]],
+      selectedCategories: [[]], // 💡 Guardará un arreglo con las PKs numéricas (id_category)
       entities: [null],
       photos: [null]
+    });
+  }
+
+  // 💡 Nuevo método para disparar las peticiones HTTP concurrentes al backend
+  private loadBackendData(): void {
+    forkJoin({
+      categoriesData: this.categoryService.getAll(),
+      entitiesData: this.entityService.getAll()
+    }).subscribe({
+      next: (res) => {
+        // Asignamos las respuestas tipadas directamente desde tus servicios
+        this.categories = res.categoriesData || [];
+        this.entitiesList = res.entitiesData || [];
+      },
+      error: (err) => {
+        console.error('Error al conectar con la API de Flask:', err);
+        Swal.fire('Error de carga', 'No se pudieron recuperar las categorías ni entidades reales.', 'error');
+      }
     });
   }
 
@@ -104,12 +120,15 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     this.annotationForm.patchValue({ latitude: 0, longitude: 0 });
   }
 
-  toggleCategory(cat: string): void {
-    const current = this.annotationForm.get('selectedCategories')?.value || [];
-    if (current.includes(cat)) {
-      this.annotationForm.patchValue({ selectedCategories: current.filter((c: string) => c !== cat) });
+  // 💡 Corregido: El toggle ahora evalúa objetos de categoría reales usando su 'id_category'
+  toggleCategory(cat: any): void {
+    const current: number[] = this.annotationForm.get('selectedCategories')?.value || [];
+    const catId = cat.id_category;
+
+    if (current.includes(catId)) {
+      this.annotationForm.patchValue({ selectedCategories: current.filter((id: number) => id !== catId) });
     } else {
-      this.annotationForm.patchValue({ selectedCategories: [...current, cat] });
+      this.annotationForm.patchValue({ selectedCategories: [...current, catId] });
     }
   }
 
@@ -199,9 +218,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
       const marker = L.marker([ann.latitude, ann.longitude]).addTo(this.map).bindPopup(popupContent);
       this.markers.push(marker);
-      // Añadir listener para el botón de calificar dentro del popup
       marker.on('popupopen', () => {
-        // pequeño delay para asegurar que el DOM del popup esté disponible
         setTimeout(() => {
           const btn = document.getElementById(`rate-btn-${ann.id_annotation}`);
           if (btn) {
@@ -219,7 +236,6 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Buscar si el usuario ya calificó esta anotación
     this.voteService.search({ id_annotation: ann.id_annotation }).subscribe((res: any) => {
       const votes = Array.isArray(res) ? res : (res?.data || []);
       const existing = votes.find((v: any) => v.id_citizen === (currentUser.id || currentUser.id_citizen || currentUser.id_user));
@@ -266,12 +282,12 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         if (existing && existing.id) {
           this.voteService.update(existing.id, payload).subscribe({
             next: () => Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success'),
-            error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error')
+            error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error'),
           });
         } else {
           this.voteService.create(payload).subscribe({
             next: () => Swal.fire('Gracias', 'Tu calificación fue registrada.', 'success'),
-            error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error')
+            error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error'),
           });
         }
       });
@@ -311,14 +327,13 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         const idAnnotation = createdAnnotation.id_annotation;
         const requests: any[] = [];
 
-        const selectedCats = formValue.selectedCategories || [];
-        selectedCats.forEach((catName: string) => {
-          const localIndex = this.categories.indexOf(catName);
-          const simulatedCategoryId = localIndex !== -1 ? localIndex + 1 : 1;
+        // 💡 Corregido: Ahora iteramos las llaves primarias reales de la base de datos
+        const selectedCatIds = formValue.selectedCategories || [];
+        selectedCatIds.forEach((idCategory: number) => {
           requests.push(
             this.annotationService['http'].post(`${environment.apiUrl}/annotation-categories`, {
               id_annotation: idAnnotation,
-              id_category: simulatedCategoryId
+              id_category: idCategory
             })
           );
         });
@@ -351,7 +366,11 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         const id = createdAnnotation.id_annotation;
         const selectedEntityObj = this.entitiesList.find(e => e.id_entity === Number(formValue.entities));
         
-        const categoriesMapped = (formValue.selectedCategories || []).map((name: string) => ({ name }));
+        // 💡 Buscamos los nombres de las categorías correspondientes para guardarlos en el cache local de la vista
+        const categoriesMapped = this.categories
+          .filter(c => formValue.selectedCategories.includes(c.id_category))
+          .map(c => ({ name: c.name }));
+
         const entityString = selectedEntityObj ? selectedEntityObj.name : 'Ninguna';
 
         if (fileToUpload) {
@@ -371,11 +390,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
           };
           reader.readAsDataURL(fileToUpload);
         } else {
-          const metadata = {
-            categories: categoriesMapped,
-            entities_text: entityString,
-            evidences: []
-          };
+          const metadata = { categories: categoriesMapped, entities_text: entityString, evidences: [] };
           const currentCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
           currentCache[id] = metadata;
           localStorage.setItem('annotations_metadata', JSON.stringify(currentCache));
