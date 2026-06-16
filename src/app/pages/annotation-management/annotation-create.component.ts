@@ -231,56 +231,70 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
   openRatingModal(ann: any): void {
     const currentUser = this.securityService.getCurrentUser();
-    if (!currentUser) {
+    const citizenId = this.getCurrentCitizenId(currentUser);
+    if (!citizenId) {
       Swal.fire('Inicia sesión', 'Debes iniciar sesión para calificar esta anotación.', 'warning');
       return;
     }
 
     this.voteService.search({ id_annotation: ann.id_annotation }).subscribe((res: any) => {
-      const votes = Array.isArray(res) ? res : (res?.data || []);
-      const existing = votes.find((v: any) => v.id_citizen === (currentUser.id || currentUser.id_citizen || currentUser.id_user));
+      const votes = this.extractArray(res);
+      const existing = votes.find((v: any) => Number(v.id_citizen) === Number(citizenId));
+      const existingVoteId = this.getVoteId(existing);
 
-      const initialStars = existing ? existing.stars : 0;
-      const initialComment = existing ? existing.comment : '';
+      let selectedStars = existing ? Number(existing.stars) : 0;
+      const initialComment = existing?.comment || '';
 
-      const starsHtml = [5,4,3,2,1].map(s =>
-        `<label style="cursor:pointer;margin-right:6px;">
-            <input type="radio" name="stars" value="${s}" style="display:none;" ${initialStars===s ? 'checked' : ''} />
-            <span style="font-size:20px; color:${initialStars>=s ? '#f59e0b' : '#d1d5db'};">★</span>
-         </label>`
+      const starsHtml = [1, 2, 3, 4, 5].map(s =>
+        `<button type="button" class="vote-star" data-star="${s}" aria-label="${s} estrella${s === 1 ? '' : 's'}" style="border:0;background:transparent;font-size:34px;line-height:1;color:${selectedStars >= s ? '#f59e0b' : '#d1d5db'};padding:0 3px;cursor:pointer;">&#9733;</button>`
       ).join('');
 
       Swal.fire({
         title: existing ? 'Editar calificación' : 'Calificar anotación',
         html: `
           <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;">${starsHtml}</div>
-          <textarea id="vote-comment" class="swal2-textarea" placeholder="Comentario (opcional)" rows="3">${initialComment || ''}</textarea>
+          <textarea id="vote-comment" class="swal2-textarea" placeholder="Comentario (opcional)" rows="3">${this.escapeHtml(initialComment)}</textarea>
         `,
         showCancelButton: true,
+        cancelButtonText: 'Cancelar',
         confirmButtonText: existing ? 'Actualizar' : 'Enviar',
+        didOpen: () => {
+          const starButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.vote-star'));
+          const paintStars = () => {
+            starButtons.forEach(button => {
+              const value = Number(button.dataset['star']);
+              button.style.color = selectedStars >= value ? '#f59e0b' : '#d1d5db';
+            });
+          };
+
+          starButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              selectedStars = Number(button.dataset['star']);
+              paintStars();
+            });
+          });
+        },
         preConfirm: () => {
-          const selected = (document.querySelector('input[name="stars"]:checked') as HTMLInputElement);
-          const stars = selected ? parseInt(selected.value, 10) : 0;
           const commentEl = document.getElementById('vote-comment') as HTMLTextAreaElement;
           const comment = commentEl ? commentEl.value : '';
-          if (!stars || stars < 1 || stars > 5) {
+          if (!selectedStars || selectedStars < 1 || selectedStars > 5) {
             Swal.showValidationMessage('Selecciona una calificación entre 1 y 5 estrellas.');
             return null;
           }
-          return { stars, comment };
+          return { stars: selectedStars, comment };
         }
       }).then((result) => {
         if (!result.isConfirmed || !result.value) return;
 
         const payload: Vote = {
-          id_citizen: currentUser.id || currentUser.id_citizen || currentUser.id_user || 1,
-          id_annotation: ann.id_annotation,
+          id_citizen: citizenId,
+          id_annotation: Number(ann.id_annotation),
           stars: result.value.stars,
           comment: result.value.comment || ''
         };
 
-        if (existing && existing.id) {
-          this.voteService.update(existing.id, payload).subscribe({
+        if (existing && existingVoteId) {
+          this.voteService.update(existingVoteId, payload).subscribe({
             next: () => Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success'),
             error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error'),
           });
@@ -295,6 +309,50 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       console.error('Error buscando calificaciones:', err);
       Swal.fire('Error', 'No se pudo consultar las calificaciones existentes.', 'error');
     });
+  }
+
+  private getCurrentCitizenId(currentUser: any): number | null {
+    if (!currentUser) return null;
+
+    const possibleIds = [
+      currentUser.id_citizen,
+      currentUser.id,
+      currentUser.id_user,
+      currentUser.user?.id_citizen,
+      currentUser.user?.id,
+      currentUser.user?.id_user
+    ];
+
+    const id = possibleIds
+      .map(value => Number(value))
+      .find(value => Number.isFinite(value) && value > 0);
+
+    return id || null;
+  }
+
+  private getVoteId(vote: any): number | null {
+    if (!vote) return null;
+    const id = Number(vote.id_vote || vote.id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }
+
+  private extractArray(res: any): any[] {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.results)) return res.results;
+    if (Array.isArray(res?.items)) return res.items;
+    if (Array.isArray(res?.rows)) return res.rows;
+    if (Array.isArray(res?.votes)) return res.votes;
+    return [];
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   onSubmit(): void {
