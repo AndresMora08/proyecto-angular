@@ -2,6 +2,9 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AnnotationService } from '../../services/annotation/annotation.service';
+import { VoteService } from '../../services/vote/vote.service';
+import { SecurityService } from '../../services/auth/oauth.service';
+import { Vote } from '../../models/Vote';
 import * as L from 'leaflet';
 import Swal from 'sweetalert2';
 import { Annotation } from '../../models/Annotation';
@@ -40,7 +43,9 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
   constructor(
     private fb: FormBuilder,
-    private annotationService: AnnotationService
+    private annotationService: AnnotationService,
+    private voteService: VoteService,
+    private securityService: SecurityService
   ) {}
 
   ngOnInit(): void {
@@ -186,11 +191,93 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
             ${categoriesBadge}
           </div>
           ${imageHtml}
+          <div style="margin-top:8px; display:flex; gap:6px;">
+            <button id="rate-btn-${ann.id_annotation}" style="flex:1; background:#4f46e5; color:#fff; border:none; padding:6px 8px; border-radius:6px; font-size:12px; cursor:pointer;">Calificar</button>
+          </div>
         </div>
       `;
 
       const marker = L.marker([ann.latitude, ann.longitude]).addTo(this.map).bindPopup(popupContent);
       this.markers.push(marker);
+      // Añadir listener para el botón de calificar dentro del popup
+      marker.on('popupopen', () => {
+        // pequeño delay para asegurar que el DOM del popup esté disponible
+        setTimeout(() => {
+          const btn = document.getElementById(`rate-btn-${ann.id_annotation}`);
+          if (btn) {
+            btn.addEventListener('click', () => this.openRatingModal(ann));
+          }
+        }, 50);
+      });
+    });
+  }
+
+  openRatingModal(ann: any): void {
+    const currentUser = this.securityService.getCurrentUser();
+    if (!currentUser) {
+      Swal.fire('Inicia sesión', 'Debes iniciar sesión para calificar esta anotación.', 'warning');
+      return;
+    }
+
+    // Buscar si el usuario ya calificó esta anotación
+    this.voteService.search({ id_annotation: ann.id_annotation }).subscribe((res: any) => {
+      const votes = Array.isArray(res) ? res : (res?.data || []);
+      const existing = votes.find((v: any) => v.id_citizen === (currentUser.id || currentUser.id_citizen || currentUser.id_user));
+
+      const initialStars = existing ? existing.stars : 0;
+      const initialComment = existing ? existing.comment : '';
+
+      const starsHtml = [5,4,3,2,1].map(s =>
+        `<label style="cursor:pointer;margin-right:6px;">
+            <input type="radio" name="stars" value="${s}" style="display:none;" ${initialStars===s ? 'checked' : ''} />
+            <span style="font-size:20px; color:${initialStars>=s ? '#f59e0b' : '#d1d5db'};">★</span>
+         </label>`
+      ).join('');
+
+      Swal.fire({
+        title: existing ? 'Editar calificación' : 'Calificar anotación',
+        html: `
+          <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;">${starsHtml}</div>
+          <textarea id="vote-comment" class="swal2-textarea" placeholder="Comentario (opcional)" rows="3">${initialComment || ''}</textarea>
+        `,
+        showCancelButton: true,
+        confirmButtonText: existing ? 'Actualizar' : 'Enviar',
+        preConfirm: () => {
+          const selected = (document.querySelector('input[name="stars"]:checked') as HTMLInputElement);
+          const stars = selected ? parseInt(selected.value, 10) : 0;
+          const commentEl = document.getElementById('vote-comment') as HTMLTextAreaElement;
+          const comment = commentEl ? commentEl.value : '';
+          if (!stars || stars < 1 || stars > 5) {
+            Swal.showValidationMessage('Selecciona una calificación entre 1 y 5 estrellas.');
+            return null;
+          }
+          return { stars, comment };
+        }
+      }).then((result) => {
+        if (!result.isConfirmed || !result.value) return;
+
+        const payload: Vote = {
+          id_citizen: currentUser.id || currentUser.id_citizen || currentUser.id_user || 1,
+          id_annotation: ann.id_annotation,
+          stars: result.value.stars,
+          comment: result.value.comment || ''
+        };
+
+        if (existing && existing.id) {
+          this.voteService.update(existing.id, payload).subscribe({
+            next: () => Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success'),
+            error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error')
+          });
+        } else {
+          this.voteService.create(payload).subscribe({
+            next: () => Swal.fire('Gracias', 'Tu calificación fue registrada.', 'success'),
+            error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error')
+          });
+        }
+      });
+    }, (err: any) => {
+      console.error('Error buscando calificaciones:', err);
+      Swal.fire('Error', 'No se pudo consultar las calificaciones existentes.', 'error');
     });
   }
 

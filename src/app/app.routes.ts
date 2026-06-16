@@ -18,7 +18,8 @@ import { VideosComponent } from './pages/ui-elements/videos/videos.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
-import { ReportChatComponent } from './pages/reports/report-chat/report-chat.component';
+import { ReportManagementComponent } from './pages/reports/report-chat/report-chat.component';
+import { TerritorialMapComponent } from './pages/territorial-map/territorial-map.component';
 
 // IMPORTACIONES DE ADMINISTRACIÓN DE LA PLATAFORMA
 import { EntityManagementComponent } from './pages/admin/entity-management/entity-management.component';
@@ -147,10 +148,17 @@ export const routes: Routes = [
         component: VideosComponent,
         title: 'Angular Videos Dashboard | TailAdmin - Angular Admin Dashboard Template'
       },
+      
       {
         path: 'reports',
-        component: ReportChatComponent,
+        component: ReportManagementComponent,
         title: 'Reportes Inteligentes'
+      },
+
+      {
+        path: 'territorial-map',
+        component: TerritorialMapComponent,
+        title: 'Mapa Territorial | Territorial'
       },
       {
         path: 'annotation-create',

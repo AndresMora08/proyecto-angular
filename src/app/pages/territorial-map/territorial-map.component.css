@@ -1,0 +1,86 @@
+:host {
+  display: block;
+}
+
+#territorial-map-canvas {
+  background: #f2f4f7;
+}
+
+:host ::ng-deep .territorial-marker {
+  background: transparent;
+  border: 0;
+}
+
+:host ::ng-deep .territorial-marker span {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.24);
+}
+
+:host ::ng-deep .territorial-popup {
+  width: 270px;
+  color: #344054;
+  font-family: Outfit, system-ui, sans-serif;
+}
+
+:host ::ng-deep .territorial-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #101828;
+}
+
+:host ::ng-deep .territorial-popup-header span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+:host ::ng-deep .territorial-popup p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .territorial-popup dl {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 5px 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+:host ::ng-deep .territorial-popup dt {
+  color: #667085;
+  font-weight: 600;
+}
+
+:host ::ng-deep .territorial-popup dd {
+  margin: 0;
+  color: #344054;
+}
+
+:host ::ng-deep .territorial-popup-image,
+:host ::ng-deep .territorial-popup-empty {
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+}
+
+:host ::ng-deep .territorial-popup-image {
+  object-fit: cover;
+  border: 1px solid #e4e7ec;
+}
+
+:host ::ng-deep .territorial-popup-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f4f7;
+  color: #98a2b3;
+  font-size: 12px;
+}

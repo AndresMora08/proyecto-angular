@@ -7,13 +7,14 @@ export const environment = {
 
 
   firebase: {
-    apiKey: "AIzaSyAlrM_D1XrB4S7snC-U0RMuOY_Vc6B4Spg",
-    authDomain: "angular-6c2d0.firebaseapp.com",
-    projectId: "angular-6c2d0",
-    storageBucket: "angular-6c2d0.firebasestorage.app",
-    messagingSenderId: "607223704681",
-    appId: "1:607223704681:web:8841c1566bfaa74aa146f8",
-    measurementId: "G-K276M3ELXW"
+   apiKey: "AIzaSyAJTedQWQmuhfvRI8W6gmaHqKKlqg8xKrU",
+  authDomain: "proyecto-angular-dab35.firebaseapp.com",
+  projectId: "proyecto-angular-dab35",
+  storageBucket: "proyecto-angular-dab35.firebasestorage.app",
+  messagingSenderId: "859669609740",
+  appId: "1:859669609740:web:c89820d587382c65eb9d29",
+  measurementId: "G-75N5QZK2Y8"
+
   }
 };
 const app = initializeApp(environment.firebase);

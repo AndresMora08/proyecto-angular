@@ -1,7 +1,20 @@
-<apx-chart
-  [series]="chartOptions.series"
-  [chart]="chartOptions.chart"
-  [labels]="chartOptions.labels"
-  [xaxis]="chartOptions.xaxis"
->
-</apx-chart>
+@if (chartOptions) {
+  <div id="chart">
+    <apx-chart
+      [series]="chartOptions.series"
+      [chart]="chartOptions.chart"
+      [plotOptions]="chartOptions.plotOptions!"
+      [dataLabels]="chartOptions.dataLabels!"
+      [stroke]="chartOptions.stroke!"
+      [colors]="chartOptions.colors!"
+      [title]="chartOptions.title!"
+      [grid]="chartOptions.grid!"
+      [markers]="chartOptions.markers!"
+      [xaxis]="chartOptions.xaxis"
+      [yaxis]="chartOptions.yaxis"
+      [legend]="chartOptions.legend!"
+      [labels]="chartOptions.labels"
+      [responsive]="chartOptions.responsive!"
+    ></apx-chart>
+  </div>
+}

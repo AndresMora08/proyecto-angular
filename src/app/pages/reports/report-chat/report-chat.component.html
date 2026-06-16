@@ -1,41 +1,225 @@
-<div class="p-6 space-y-6">
+<div class="p-6 bg-[#f8fafc] min-h-screen dark:bg-slate-900 space-y-6">
 
-  <div class="bg-white rounded-xl shadow p-4">
 
-    <h2 class="text-2xl font-bold mb-4">
-      Reportes Inteligentes
-    </h2>
+  <!-- ── Encabezado ─────────────────────────────────────────────────────── -->
+  <div class="flex justify-between items-center max-w-4xl mx-auto">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Reportes inteligentes</h1>
+      <p class="text-sm text-slate-500">Consulta información del territorio en lenguaje natural y obtén reportes analíticos al instante.</p>
+    </div>
+  </div>
 
-    <textarea
-      [(ngModel)]="query"
-      rows="4"
-      placeholder="Escribe una consulta..."
-      class="w-full border rounded-lg p-3"
-    ></textarea>
 
+  <!-- ── Tabs del módulo ────────────────────────────────────────────────── -->
+  <div class="flex border-b border-slate-200 dark:border-slate-700 gap-6 max-w-4xl mx-auto">
     <button
-      (click)="sendQuery()"
-      class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg"
-    >
-      Enviar
+      (click)="activeModuleTab = 'chat'"
+      [class]="activeModuleTab === 'chat'
+        ? 'border-b-2 border-blue-600 text-blue-600 font-semibold pb-2 px-1 text-sm'
+        : 'text-slate-400 pb-2 px-1 text-sm hover:text-slate-700'">
+      Chat de reportes
     </button>
-
+    <button
+      (click)="activeModuleTab = 'history'"
+      [class]="activeModuleTab === 'history'
+        ? 'border-b-2 border-blue-600 text-blue-600 font-semibold pb-2 px-1 text-sm'
+        : 'text-slate-400 pb-2 px-1 text-sm hover:text-slate-700'">
+      Historial de consultas
+    </button>
   </div>
 
-  <div *ngIf="loading">
-    Generando reporte...
-  </div>
 
-  <div *ngIf="report">
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB CHAT
+  ════════════════════════════════════════════════════════════════════════ -->
+  @if (activeModuleTab === 'chat') {
+    <div class="space-y-6 max-w-4xl mx-auto pb-28">
 
-    <h3 class="text-xl font-semibold mb-4">
-      Resultado
-    </h3>
 
-    <app-chart
-      [report]="report"
-    ></app-chart>
+      <!-- Botones de prueba -->
+      <div class="text-right space-x-2">
+        <span class="text-xs text-slate-400 font-medium">Probar Endpoints:</span>
+        <button (click)="loadTestBar()"  class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded font-medium transition shadow-sm">📊 Test Bar</button>
+        <button (click)="loadTestLine()" class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded font-medium transition shadow-sm">📈 Test Line</button>
+        <button (click)="loadTestPie()"  class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded font-medium transition shadow-sm">🥧 Test Pie</button>
+      </div>
 
-  </div>
+
+      <div class="space-y-6">
+
+
+        <!-- Burbuja de consulta del usuario -->
+        @if (lastQuerySubmitted) {
+          <div class="flex gap-3 justify-end items-start animate-fadeIn">
+            <div class="bg-blue-50 text-slate-800 p-4 rounded-2xl rounded-tr-none border border-blue-100 max-w-xl shadow-sm text-sm">
+              <p class="leading-relaxed font-medium">{{ lastQuerySubmitted }}</p>
+              <span class="block text-[10px] text-slate-400 text-right mt-2">Ahora</span>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-xs shadow">U</div>
+          </div>
+        }
+
+
+        <!-- ── Respuesta del sistema: 4 tabs de formatos (CU-15 paso 4) ─── -->
+        @if (currentReport) {
+          <div class="flex gap-3 justify-start items-start animate-fadeIn">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-xs shadow flex-shrink-0">🤖</div>
+
+
+            <div class="space-y-3 flex-1 max-w-3xl">
+
+
+              <!-- Cabecera de respuesta -->
+              <div class="bg-white dark:bg-boxdark border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+                <div class="flex flex-wrap justify-between items-center bg-[#f8fafc] dark:bg-slate-800/60 px-4 py-3 border-b border-slate-200/70">
+                  <div>
+                    <h3 class="text-xs font-bold uppercase text-blue-600 tracking-wider">Visualización procesada</h3>
+                    <p class="text-[11px] text-slate-400">
+                      Formato ideal asignado automáticamente:
+                      <strong>{{ currentReport.type | uppercase }}</strong>
+                    </p>
+                  </div>
+                  <span class="text-[11px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
+                    ℹ️ Selecciona un formato para comparar la visualización
+                  </span>
+                </div>
+
+
+                <!-- ── Tabs de los 4 formatos ──────────────────────────── -->
+                <div class="flex border-b border-slate-100 px-4 gap-1 pt-2">
+                  @for (tab of chartTabs; track tab.id) {
+                    <button
+                      (click)="selectChartTab(tab)"
+                      [disabled]="!!tab.disabledReason"
+                      [title]="tab.disabledReason ?? ''"
+                      [class]="[
+                        'relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg transition-all',
+                        activeChartTab === tab.id && !tab.disabledReason
+                          ? 'bg-white border border-b-0 border-slate-200 text-blue-600 -mb-px z-10'
+                          : tab.disabledReason
+                            ? 'text-slate-300 cursor-not-allowed'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      ].join(' ')">
+                      <span>{{ tab.icon }}</span>
+                      <span>{{ tab.label }}</span>
+
+
+                      <!-- Badge "Ideal" en el tab recomendado por el backend -->
+                      @if (isIdealTab(tab.id)) {
+                        <span class="ml-1 text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold uppercase">
+                          Ideal
+                        </span>
+                      }
+
+
+                      <!-- Icono de candado cuando está deshabilitado (flujo 4a) -->
+                      @if (tab.disabledReason) {
+                        <span class="ml-1 text-slate-300 text-[10px]">🔒</span>
+                      }
+                    </button>
+                  }
+                </div>
+
+
+                <!-- Motivo de deshabilitación — flujo alternativo 4a -->
+                @if (activeTabDisabledReason) {
+                  <div class="mx-4 mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 flex gap-2">
+                    <span>ℹ️</span>
+                    <p>{{ activeTabDisabledReason }}</p>
+                  </div>
+                }
+
+
+                <!-- Área del gráfico activo -->
+                <div class="p-6 bg-white dark:bg-boxdark min-h-[300px] flex items-center justify-center">
+                  @if (!activeTabDisabledReason) {
+                    <div class="w-full">
+                      <app-chart [report]="currentReport" [overrideType]="activeChartTab"></app-chart>
+                    </div>
+                  } @else {
+                    <div class="text-center text-slate-300 py-12">
+                      <p class="text-4xl mb-3">🔒</p>
+                      <p class="text-sm font-medium text-slate-400">Formato no disponible para este tipo de datos</p>
+                      <p class="text-xs text-slate-300 mt-1 max-w-xs mx-auto">{{ activeTabDisabledReason }}</p>
+                    </div>
+                  }
+                </div>
+
+
+              </div>
+              <!-- / tarjeta de visualización -->
+
+
+            </div>
+          </div>
+        }
+
+
+        <!-- ── Flujo alternativo 3a: consulta no interpretable ─────────── -->
+        @if (errorMessage) {
+          <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm max-w-2xl flex gap-3 font-medium animate-fadeIn">
+            <span class="text-base flex-shrink-0">⚠️</span>
+            <div>
+              <p class="font-semibold mb-1">No fue posible interpretar la consulta</p>
+              <p class="whitespace-pre-line text-red-700 font-normal">{{ errorMessage }}</p>
+            </div>
+          </div>
+        }
+
+
+        <!-- ── Flujo alternativo 3b: sin datos para los filtros ────────── -->
+        @if (infoMessage) {
+          <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm max-w-2xl flex gap-3 font-medium animate-fadeIn">
+            <span class="text-base flex-shrink-0">💡</span>
+            <div>
+              <p class="font-semibold mb-1">Sin resultados</p>
+              <p class="font-normal">{{ infoMessage }}</p>
+            </div>
+          </div>
+        }
+
+
+      </div>
+      <!-- / espacio de conversación -->
+
+
+      <!-- ── Input fijo en la parte inferior ───────────────────────────── -->
+      <div class="fixed bottom-6 left-0 right-0 px-6 z-20">
+        <form (submit)="onSendForm($event)" class="max-w-4xl mx-auto relative bg-white border border-slate-200 rounded-xl shadow-lg flex items-center px-4 py-2 dark:bg-boxdark dark:border-slate-700">
+          <input
+            type="text"
+            id="queryInput"
+            name="queryInput"
+            [disabled]="loading"
+            placeholder="Escribe tu consulta en lenguaje natural (ej. ventas por región)…"
+            class="w-full bg-transparent outline-none pr-14 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400"
+          />
+          <button
+            type="submit"
+            [disabled]="loading"
+            class="absolute right-3 p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition flex items-center justify-center disabled:bg-slate-300 w-16 h-9">
+            @if (loading) {
+              <span class="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            } @else {
+              <span class="text-xs font-bold">Enviar</span>
+            }
+          </button>
+        </form>
+      </div>
+
+
+    </div>
+  }
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB HISTORIAL
+  ════════════════════════════════════════════════════════════════════════ -->
+  @if (activeModuleTab === 'history') {
+    <div class="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-400 text-sm max-w-4xl mx-auto">
+      🗄️ El historial de consultas e IA se listará en esta sección de forma cronológica.
+    </div>
+  }
+
 
 </div>
