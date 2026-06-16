@@ -3,16 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 
-
 import { ReportService } from '../../../services/repost/reports.service';
 import { ReportRequest } from '../../../models/ReportRequest';
 import { Report } from '../../../models/Report';
 import { AppChart } from '../../../components/ui/chart/chart/chart.component';
 
-
 /** Tipos de gráfica manejados en el CU-15 */
 type ChartTabType = 'bar' | 'grouped-bar' | 'pie' | 'line';
-
 
 interface ChartTabConfig {
   id: ChartTabType;
@@ -21,7 +18,6 @@ interface ChartTabConfig {
   /** Motivo por el que está deshabilitado (null = habilitado) */
   disabledReason: string | null;
 }
-
 
 /**
  * Mapeo: qué tipo de gráfica devuelve el backend → qué tabs aplican.
@@ -49,7 +45,6 @@ const TAB_RULES: Record<string, Record<ChartTabType, string | null>> = {
   },
 };
 
-
 @Component({
   selector: 'app-report-management',
   standalone: true,
@@ -57,23 +52,16 @@ const TAB_RULES: Record<string, Record<ChartTabType, string | null>> = {
   templateUrl: './report-chat.component.html',
 })
 export class ReportManagementComponent {
-  // ── Tabs del módulo ────────────────────────────────────────────────────────
-  activeModuleTab: 'chat' | 'history' = 'chat';
-
-
   // ── Estado de la consulta ──────────────────────────────────────────────────
   loading: boolean = false;
   lastQuerySubmitted: string = '';
-
 
   currentReport: Report | null = null;
   errorMessage: string | null = null;
   infoMessage: string | null = null;
 
-
   // ── Tabs de los 4 formatos (CU-15 paso 4) ─────────────────────────────────
   activeChartTab: ChartTabType = 'bar';
-
 
   chartTabs: ChartTabConfig[] = [
     { id: 'bar',         label: 'Barra simple',   icon: '📊', disabledReason: null },
@@ -82,28 +70,22 @@ export class ReportManagementComponent {
     { id: 'line',        label: 'Líneas',          icon: '📈', disabledReason: null },
   ];
 
-
   constructor(private reportService: ReportService) {}
-
 
   // ── Envío del formulario ──────────────────────────────────────────────────
   onSendForm(event: Event): void {
     event.preventDefault();
 
-
     const inputElement = document.getElementById('queryInput') as HTMLInputElement;
     if (!inputElement) return;
 
-
     const textoDirecto = inputElement.value.trim();
     if (!textoDirecto) return;
-
 
     this.loading = true;
     this.errorMessage = null;
     this.infoMessage = null;
     this.lastQuerySubmitted = textoDirecto;
-
 
     const bodyRequest: ReportRequest = { query: textoDirecto };
     console.log('Body enviado:', JSON.stringify(bodyRequest));
@@ -111,7 +93,6 @@ export class ReportManagementComponent {
       next: (response: Report) => {
         this.loading = false;
         inputElement.value = '';
-
 
         // ── Flujo alternativo 3b: sin datos ────────────────────────────────
         if (
@@ -125,13 +106,11 @@ export class ReportManagementComponent {
           return;
         }
 
-
         this.applyReport(response);
       },
       error: (err: HttpErrorResponse) => {
         this.loading = false;
         this.currentReport = null;
-
 
         // ── Flujo alternativo 3a: consulta no interpretable (422) ──────────
         if (err.status === 422) {
@@ -151,7 +130,6 @@ export class ReportManagementComponent {
     });
   }
 
-
   // ── Lógica de tabs (CU-15 paso 4 y flujo 4a) ─────────────────────────────
   /**
    * Recibe el reporte, aplica las reglas de habilitación de tabs y
@@ -161,15 +139,12 @@ export class ReportManagementComponent {
     this.currentReport = response;
     const backendType = response.type as string;
 
-
     const rules = TAB_RULES[backendType] ?? null;
-
 
     this.chartTabs = this.chartTabs.map((tab) => ({
       ...tab,
       disabledReason: rules ? (rules[tab.id] ?? null) : null,
     }));
-
 
     // Activa el tab ideal según lo que dijo el backend
     if (backendType === 'pie' || backendType === 'bar' || backendType === 'line') {
@@ -179,22 +154,18 @@ export class ReportManagementComponent {
     }
   }
 
-
   selectChartTab(tab: ChartTabConfig): void {
     if (tab.disabledReason) return;
     this.activeChartTab = tab.id;
   }
 
-
   get activeTabDisabledReason(): string | null {
     return this.chartTabs.find((t) => t.id === this.activeChartTab)?.disabledReason ?? null;
   }
 
-
   isIdealTab(tabId: ChartTabType): boolean {
     return !!this.currentReport && tabId === (this.currentReport as any).type;
   }
-
 
   // ── Botones de prueba ─────────────────────────────────────────────────────
   loadTestPie(): void {
@@ -203,20 +174,17 @@ export class ReportManagementComponent {
     this.reportService.getTestPie().subscribe((res) => this.applyReport(res));
   }
 
-
   loadTestBar(): void {
     this.clearMessages();
     this.lastQuerySubmitted = 'Simulando consulta comparativa (Bar)…';
     this.reportService.getTestBar().subscribe((res) => this.applyReport(res));
   }
 
-
   loadTestLine(): void {
     this.clearMessages();
     this.lastQuerySubmitted = 'Simulando tendencia temporal (Line)…';
     this.reportService.getTestLine().subscribe((res) => this.applyReport(res));
   }
-
 
   private clearMessages(): void {
     this.errorMessage = null;
