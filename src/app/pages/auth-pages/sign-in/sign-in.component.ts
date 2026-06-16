@@ -4,11 +4,10 @@ import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { SecurityService } from '../../../services/auth/oauth.service';
 import { OfficialService } from '../../../services/official/official.service';
-import { CitizenService } from '../../../services/citizen/citizen.service'; // Asegúrate de tener este servicio creado
+import { CitizenService } from '../../../services/citizen/citizen.service';
 import { AuthPageLayoutComponent } from '../../../shared/layout/auth-page-layout/auth-page-layout.component';
 import Swal from 'sweetalert2';
 
-// Importación directa de la instancia de Firebase Auth desde tu environment
 import { auth } from '../../../services/environments/environment';
 import { 
   signInWithPopup,
@@ -48,13 +47,8 @@ export class SignInComponent implements OnInit {
     this.showPassword = !this.showPassword;
   }
 
-  /**
-   * 🔍 Método auxiliar centralizado para verificar si el correo existe 
-   * en las tablas de la base de datos de tu Flask (Funcionarios o Ciudadanos)
-   */
   private async validateUserInBackendTables(email: string): Promise<{ user: any; type: 'OFFICIAL' | 'CITIZEN' } | null> {
     try {
-      // 1. Buscar en Funcionarios (Official)
       const officials = await this.officialService.getAll().toPromise() || [];
       const officialUser = officials.find((o: any) => o.email?.toLowerCase() === email.toLowerCase());
       
@@ -62,7 +56,6 @@ export class SignInComponent implements OnInit {
         return { user: officialUser, type: 'OFFICIAL' };
       }
 
-      // 2. Buscar en Ciudadanos (Citizen)
       const citizens = await this.citizenService.getAll().toPromise() || [];
       const citizenUser = citizens.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
       
@@ -77,9 +70,6 @@ export class SignInComponent implements OnInit {
     }
   }
 
-  // =====================================================
-  // LOGIN TRADICIONAL (EMAIL Y CONTRASEÑA DIRECTO EN FIREBASE)
-  // =====================================================
   async onSubmit(): Promise<void> {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -90,7 +80,6 @@ export class SignInComponent implements OnInit {
     const { email, password } = this.loginForm.value;
 
     try {
-      // 1. Validar primero si el usuario existe en tu ecosistema local de Flask
       const backendValidation = await this.validateUserInBackendTables(email);
 
       if (!backendValidation) {
@@ -103,16 +92,13 @@ export class SignInComponent implements OnInit {
         return;
       }
 
-      // 2. Si existe en la BD, procedemos a autenticar la contraseña con Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       const token = await firebaseUser.getIdToken();
 
-      // Mapear rol correspondiente
       const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
       backendValidation.user.role = assignedRole;
 
-      // 3. Guardar sesión localmente
       this.securityService.setCurrentSession(backendValidation.user, token);
 
       this.isLoading = false;
@@ -124,7 +110,7 @@ export class SignInComponent implements OnInit {
         showConfirmButton: false
       });
 
-      this.redirectBasedOnRole(assignedRole);
+      this.redirectBasedOnRole();
 
     } catch (firebaseError: any) {
       this.isLoading = false;
@@ -145,14 +131,10 @@ export class SignInComponent implements OnInit {
     }
   }
 
-  // =====================================================
-  // LOGIN SOCIAL (FIREBASE POPUP + VALIDACIÓN LOCAL)
-  // =====================================================
   async handleSocialLogin(provider: AuthProvider, providerName: string): Promise<void> {
     this.isLoading = true;
 
     try {
-      // 1. Autenticación con el PopUp de Firebase
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
 
@@ -160,7 +142,6 @@ export class SignInComponent implements OnInit {
         throw new Error('El proveedor no devolvió un correo válido.');
       }
 
-      // 2. Verificar existencia en el Backend de Flask pasivamente
       const backendValidation = await this.validateUserInBackendTables(firebaseUser.email);
 
       if (!backendValidation) {
@@ -177,7 +158,6 @@ export class SignInComponent implements OnInit {
         return;
       }
 
-      // 3. Extraer primer nombre para el saludo
       let userFirstName = backendValidation.user.name ? backendValidation.user.name.split(' ')[0] : '';
       if (!userFirstName) {
         userFirstName = firebaseUser.displayName ? firebaseUser.displayName.split(' ')[0] : 'Usuario';
@@ -186,7 +166,6 @@ export class SignInComponent implements OnInit {
       const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
       backendValidation.user.role = assignedRole;
 
-      // 4. Guardar sesión local sin llamadas de escritura al backend
       const token = await firebaseUser.getIdToken();
       this.securityService.setCurrentSession(backendValidation.user, token);
 
@@ -199,7 +178,7 @@ export class SignInComponent implements OnInit {
         showConfirmButton: false
       });
 
-      this.redirectBasedOnRole(assignedRole);
+      this.redirectBasedOnRole();
 
     } catch (error: any) {
       this.isLoading = false;
@@ -207,7 +186,6 @@ export class SignInComponent implements OnInit {
 
       if (error.code === 'auth/popup-closed-by-user') return;
 
-      // Validación de cuentas vinculadas a otros proveedores (Lógica idéntica a tu React)
       if (error.code === 'auth/account-exists-with-different-credential') {
         const email = error.customData?.email;
         if (email) {
@@ -216,8 +194,7 @@ export class SignInComponent implements OnInit {
           if (methods.includes('google.com')) providerText = 'Google';
           else if (methods.includes('github.com')) providerText = 'GitHub';
           else if (methods.includes('password')) providerText = 'correo y contraseña';
-          else if (methods.includes('microsoft.com')) providerText = 'Microsoft';
-
+          
           Swal.fire({
             icon: 'warning',
             title: 'Cuenta ya registrada',
@@ -235,25 +212,15 @@ export class SignInComponent implements OnInit {
     }
   }
 
-  // Triggers de los botones del HTML
-  loginGoogle(): void {
-    this.handleSocialLogin(new GoogleAuthProvider(), 'Google');
-  }
+  loginGoogle(): void { this.handleSocialLogin(new GoogleAuthProvider(), 'Google'); }
+  loginGitHub(): void { this.handleSocialLogin(new GithubAuthProvider(), 'GitHub'); }
+  loginMicrosoft(): void { this.handleSocialLogin(new OAuthProvider('microsoft.com'), 'Microsoft'); }
 
-  loginGitHub(): void {
-    this.handleSocialLogin(new GithubAuthProvider(), 'GitHub');
-  }
-
-  loginMicrosoft(): void {
-    this.handleSocialLogin(new OAuthProvider('microsoft.com'), 'Microsoft');
-  }
-
-  private redirectBasedOnRole(role: string): void {
-    const standardizedRole = role.toUpperCase();
-    if (standardizedRole === 'ADMINISTRADOR' || standardizedRole === 'FUNCIONARIO' || standardizedRole === 'ADMIN') {
-      this.router.navigate(['/admin/category-management']);
-    } else {
-      this.router.navigate(['/']);
-    }
+  /**
+   * 🚀 Redirección unificada al Ecommerce Dashboard de TailAdmin
+   */
+  private redirectBasedOnRole(): void {
+    // Apunta directamente a la ruta raíz establecida en tu enrutador principal ('')
+    this.router.navigate(['/']);
   }
 }

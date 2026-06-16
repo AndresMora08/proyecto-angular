@@ -73,33 +73,33 @@ export const routes: Routes = [
         title: 'Angular Blank Dashboard | TailAdmin - Angular Admin Dashboard Template'
       },
       {
-        path: 'entities',
+        path: 'entities', //01 CU-01: Gestión de Entidades
         component: EntityManagementComponent,
         title: 'Administración de Entidades | TailAdmin - Angular Admin Dashboard Template'
       },
       {
-        path: 'categories',
+        path: 'categories',//04 CU-04: Gestión de Categorías
         component: CategoryManagementComponent,
         title: 'Estructura de Categorías | TailAdmin - Angular Admin Dashboard Template'
       },
       {
-        path: 'staff',
+        path: 'staff', //02 CU-02: Gestión de Funcionarios
         component: StaffManagementComponent,
         title: 'Gestión de Funcionarios | Territorial'
       },
       {
-        path: 'citizens',
+        path: 'citizens', //03 CU-03: Gestión de Ciudadanos
         component: CitizenManagementComponent,
         title: 'Gestión de Ciudadanos | Territorial'
       },
       {
-        path: 'communes',
+        path: 'communes',//05 CU-05: Gestión de Comunas
         component: CommuneManagementComponent,
         title: 'Gestión de Comunas | Territorial'
       },
       // 👈 NUEVA RUTA: GESTIÓN DE BARRIOS
       {
-        path: 'neighborhoods',
+        path: 'neighborhoods',//06 CU-06: Gestión de Barrios 9 y 10
         component: NeighborhoodManagementComponent,
         title: 'Gestión de Barrios | Territorial'
       },
@@ -149,7 +149,7 @@ export const routes: Routes = [
         title: 'Angular Videos Dashboard | TailAdmin - Angular Admin Dashboard Template'
       },
       
-      {
+      {//15 CU-15: Reportes Inteligentes con Visualización Dinámica
         path: 'reports',
         component: ReportManagementComponent,
         title: 'Reportes Inteligentes'
@@ -160,7 +160,7 @@ export const routes: Routes = [
         component: TerritorialMapComponent,
         title: 'Mapa Territorial | Territorial'
       },
-      {
+      {//12 y 13 CU-12 y CU-13: Creación y Edición de Anotaciones en el Mapa y 14 CU-14: Visualización de Anotaciones en el Mapa Interactivo
         path: 'annotation-create',
         component: AnnotationCreateComponent,
         title: 'Crear Anotación | Territorial'
@@ -179,7 +179,7 @@ export const routes: Routes = [
     title: 'Angular Sign Up Dashboard | TailAdmin - Angular Admin Dashboard Template'
   },
   //Mapa interacttivo
-  {
+  {//11 CU-11: Seguimiento de Funcionarios en Mapa Interactivo
     path: 'official-tracking',
     component: OfficialTrackingComponent
   },

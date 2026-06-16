@@ -52,6 +52,7 @@ export class StaffManagementComponent implements OnInit {
     }
   ];
 
+  // ⚙️ MODIFICADO EXCLUSIVAMENTE: Ahora el rol es un selector entre official y admin
   formFields: FormField[] = [
     { 
       name: 'id_entity', 
@@ -62,7 +63,13 @@ export class StaffManagementComponent implements OnInit {
     },
     { name: 'name', label: 'Nombre Completo', type: 'text', required: true },
     { name: 'email', label: 'Correo Electrónico', type: 'email', required: true },
-    { name: 'role', label: 'Cargo / Rol asignado', type: 'text', required: true },
+    { 
+      name: 'role', 
+      label: 'Cargo / Rol asignado', 
+      type: 'select', 
+      required: true,
+      options: ['official', 'admin'] // 👈 Opciones solicitadas cerradas
+    },
     { name: 'phone', label: 'Número de Celular', type: 'text', required: true },
     { 
       name: 'status', 
@@ -140,6 +147,7 @@ export class StaffManagementComponent implements OnInit {
   showCreate() { 
     this.viewMode = 'create'; 
     this.selected = { 
+      role: 'official', // Valor por defecto inicializado de forma limpia
       status: 'active',
       last_latitude: this.defaultLat,
       last_longitude: this.defaultLng,
@@ -157,7 +165,7 @@ export class StaffManagementComponent implements OnInit {
     this.loadFuncionarios(); 
   }
 
-  // 💡 Mismo patrón que en AnnotationCreateComponent / CitizenManagementComponent
+  // 💡 Mismo patrón que en AnnotationCreateComponent / CitizenManagementComponent (Sin modificaciones)
   private initMap(): void {
     const lat = this.selected?.last_latitude || this.defaultLat;
     const lng = this.selected?.last_longitude || this.defaultLng;
@@ -195,17 +203,15 @@ export class StaffManagementComponent implements OnInit {
   handleFormSubmit(payload: any): void {
     console.log("➡️ Payload crudo recibido del formulario:", payload);
 
-    // Encontrar la entidad real basada en el nombre seleccionado en el formulario genérico
     const entidadSeleccionada = this.entidades.find(e => e.name === payload.id_entity);
     const idEntityResuelto = entidadSeleccionada ? entidadSeleccionada.id_entity : null;
 
-    // 🛠️ MAPEADO EXPLÍCITO SEGURO: Evita arrastrar propiedades erróneas o duplicar el id_entity en el ID del funcionario.
     const processedPayload: Official = {
       id_entity: Number(idEntityResuelto),
       name: payload.name,
       email: payload.email,
       phone: payload.phone,
-      role: payload.role,
+      role: payload.role, // Pasará directamente el string 'official' o 'admin'
       status: payload.status,
       last_latitude: this.selected?.last_latitude ?? this.defaultLat,
       last_longitude: this.selected?.last_longitude ?? this.defaultLng,
@@ -214,7 +220,6 @@ export class StaffManagementComponent implements OnInit {
     };
 
     if (this.viewMode === 'create') {
-      // ⚠️ Al crear, eliminamos explícitamente cualquier clave de ID para que el Backend autoincremente solo
       delete processedPayload.id_official;
 
       this.officialService.checkEmailExists(processedPayload.email).subscribe({
@@ -242,11 +247,9 @@ export class StaffManagementComponent implements OnInit {
       });
 
     } else if (this.viewMode === 'edit') {
-      // 🔄 Recuperamos estrictamente el ID del funcionario original seleccionado para la edición
       const idOfficial = this.selected?.id_official || this.selected?.id;
       
       if (idOfficial) {
-        // Asignamos el ID correcto al cuerpo de la petición por si la API lo requiere en el body
         processedPayload.id_official = Number(idOfficial);
 
         console.log(`✏️ Solicitando actualización en API para ID Funcionario: ${idOfficial}`, processedPayload);
