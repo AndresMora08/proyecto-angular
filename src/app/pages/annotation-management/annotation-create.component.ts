@@ -1,12 +1,14 @@
 import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { AnnotationService } from '../../services/annotation/annotation.service';
 import { VoteService } from '../../services/vote/vote.service';
 import { SecurityService } from '../../services/auth/oauth.service';
-// 💡 Importamos tus servicios reales de categorías y entidades
 import { CategoryService } from '../../services/category/category.service';
 import { EntityService } from '../../services/entity/entity.service';
+// 💡 Importamos tus servicios reales de Comunas y Barrios
+import { CommuneService } from '../../services/commune/commune.service';
+import { NeighborhoodService } from '../../services/neighborhood/neighborhood.service';
 import { Vote } from '../../models/Vote';
 import * as L from 'leaflet';
 import Swal from 'sweetalert2';
@@ -19,16 +21,23 @@ import { environment } from '../../services/environments/environment';
   selector: 'app-annotation-create',
   templateUrl: './annotation-create.component.html',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule]
+  imports: [CommonModule, ReactiveFormsModule, FormsModule] // 💡 Agregamos FormsModule para enlazar [(ngModel)] en filtros
 })
 export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   annotationForm!: FormGroup;
   annotations: Annotation[] = []; 
+  filteredAnnotations: Annotation[] = []; // 💡 Lista mutada que se proyectará en el mapa
   selectedFiles: File[] = [];
   
-  // 💡 Colecciones dinámicas que poblará el Backend
   entitiesList: any[] = [];
   categories: any[] = [];
+  communesList: any[] = [];      // 💡 Comunas reales desde la BD
+  neighborhoodsList: any[] = []; // 💡 Barrios reales desde la BD
+
+  // 💡 Variables reactivas para capturar las opciones de los selectores superiores
+  filterCommune: string = '';
+  filterNeighborhood: string = '';
+  filterCategory: string = '';
 
   private map!: L.Map;
   private currentMarker: L.Marker | null = null;
@@ -39,14 +48,16 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     private annotationService: AnnotationService,
     private voteService: VoteService,
     private securityService: SecurityService,
-    // 💡 Inyectamos correctamente ambos servicios en el constructor
     private categoryService: CategoryService,
-    private entityService: EntityService
+    private entityService: EntityService,
+    // 💡 Inyección de tus dos nuevos servicios
+    private communeService: CommuneService,
+    private neighborhoodService: NeighborhoodService
   ) {}
 
   ngOnInit(): void {
     this.initForm();
-    this.loadBackendData(); // 💡 Llamamos a la consulta del servidor
+    this.loadBackendData(); // 💡 Carga inicial unificada de catálogos de base de datos
     this.loadAnnotations();
   }
   
@@ -59,28 +70,30 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       description: ['', Validators.required],
       latitude: [0, Validators.required],
       longitude: [0, Validators.required],
-      id_neighborhood: [null],
+      id_neighborhood: [null, Validators.required], // 💡 Ahora requerido para asegurar consistencia territorial
       id_citizen: [1],
-      selectedCategories: [[]], // 💡 Guardará un arreglo con las PKs numéricas (id_category)
+      selectedCategories: [[]], 
       entities: [null],
       photos: [null]
     });
   }
 
-  // 💡 Nuevo método para disparar las peticiones HTTP concurrentes al backend
   private loadBackendData(): void {
     forkJoin({
       categoriesData: this.categoryService.getAll(),
-      entitiesData: this.entityService.getAll()
+      entitiesData: this.entityService.getAll(),
+      communesData: this.communeService.getAll(),
+      neighborhoodsData: this.neighborhoodService.getAll()
     }).subscribe({
       next: (res) => {
-        // Asignamos las respuestas tipadas directamente desde tus servicios
         this.categories = res.categoriesData || [];
         this.entitiesList = res.entitiesData || [];
+        this.communesList = res.communesData || [];
+        this.neighborhoodsList = res.neighborhoodsData || [];
       },
       error: (err) => {
-        console.error('Error al conectar con la API de Flask:', err);
-        Swal.fire('Error de carga', 'No se pudieron recuperar las categorías ni entidades reales.', 'error');
+        console.error('Error cargando catálogos territoriales:', err);
+        Swal.fire('Error', 'No se pudo establecer conexión con los datos de comunas y barrios.', 'error');
       }
     });
   }
@@ -117,10 +130,9 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       this.map.removeLayer(this.currentMarker);
       this.currentMarker = null;
     }
-    this.annotationForm.patchValue({ latitude: 0, longitude: 0 });
+    this.annotationForm.patchValue({ latitude: 0, longitude: 0, id_neighborhood: null });
   }
 
-  // 💡 Corregido: El toggle ahora evalúa objetos de categoría reales usando su 'id_category'
   toggleCategory(cat: any): void {
     const current: number[] = this.annotationForm.get('selectedCategories')?.value || [];
     const catId = cat.id_category;
@@ -138,6 +150,45 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     }
   }
 
+  // 💡 Lógica maestra de filtrado multicriterio en cascada local
+  applyFilters(): void {
+    this.filteredAnnotations = this.annotations.filter(ann => {
+      
+      // 1. Filtro por Comuna: Buscamos si el barrio de la anotación pertenece a la comuna elegida
+      if (this.filterCommune) {
+        const barrioCorrespondiente = this.neighborhoodsList.find(n => n.id_neighborhood === ann.id_neighborhood);
+        if (!barrioCorrespondiente || barrioCorrespondiente.id_commune !== Number(this.filterCommune)) {
+          return false;
+        }
+      }
+
+      // 2. Filtro por Barrio directo
+      if (this.filterNeighborhood && ann.id_neighborhood !== Number(this.filterNeighborhood)) {
+        return false;
+      }
+
+      // 3. Filtro por Categoría: Busca si el ID seleccionado se encuentra dentro del array relacional de la anotación
+      if (this.filterCategory) {
+        const cumpleCategoria = ann.categories?.some((c: any) => c.id_category === Number(this.filterCategory) || c.id === Number(this.filterCategory));
+        if (!cumpleCategoria) return false;
+      }
+
+      return true;
+    });
+
+    // Redibujamos de inmediato los pines filtrados sobre el mapa Leaflet
+    this.drawAnnotationsOnMap(this.filteredAnnotations);
+  }
+
+  // Restablece todas las banderas de búsqueda a su estado por defecto
+  clearFilters(): void {
+    this.filterCommune = '';
+    this.filterNeighborhood = '';
+    this.filterCategory = '';
+    this.filteredAnnotations = [...this.annotations];
+    this.drawAnnotationsOnMap(this.filteredAnnotations);
+  }
+
   loadAnnotations(): void {
     this.annotationService.getAll().subscribe((data: any[]) => {
       const localCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
@@ -152,10 +203,11 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
             evidences: localCache[id].evidences || []
           };
         }
-        return { ...item, categories: [], entities_text: 'Ninguna', evidences: [] };
+        return { ...item, categories: item.categories || [], entities_text: 'Ninguna', evidences: item.evidences || [] };
       });
 
-      this.drawAnnotationsOnMap(this.annotations); 
+      this.filteredAnnotations = [...this.annotations];
+      this.drawAnnotationsOnMap(this.filteredAnnotations); 
     });
   }
 
@@ -182,31 +234,20 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         imageHtml = `<div style="margin-top: 8px;">
                       <img src="${imageUrl}" alt="Evidencia" style="width: 100%; max-height: 110px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;"/>
                      </div>`;
-      } else {
-        imageHtml = `<div style="margin-top: 8px;">
-                      <div style="width: 100%; height: 50px; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #9ca3af; font-size: 10px;">
-                        📷 Sin imagen adjunta
-                      </div>
-                     </div>`;
       }
+
+      // Buscamos el nombre del barrio asignado para pintar en el Popup informativo del pin
+      const barrioObj = this.neighborhoodsList.find(n => n.id_neighborhood === ann.id_neighborhood);
+      const barrioName = barrioObj ? barrioObj.name : 'No especificado';
 
       const popupContent = `
         <div style="font-family: system-ui, sans-serif; width: 220px; padding: 2px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; 
-                         background-color: ${ann.status === 'PENDIENTE' ? '#fef3c7' : '#d1fae5'}; 
-                         color: ${ann.status === 'PENDIENTE' ? '#d97706' : '#065f46'};">
-              ${ann.status}
-            </span>
-          </div>
-          <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: #1f2937; line-height: 1.4;">
-            ${ann.description}
-          </h4>
-          <div style="margin-top: 4px; font-size: 11px; color: #4b5563;">
-            <strong>Entidad:</strong> ${ann.entities_text || 'Ninguna'}
-          </div>
+          <span style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; background-color: #fef3c7; color: #d97706;">
+            ${ann.status || 'PENDIENTE'}
+          </span>
+          <h4 style="margin: 4px 0; font-size: 13px; font-weight: 600; color: #1f2937;">${ann.description}</h4>
+          <div style="font-size: 11px; color: #4b5563; margin-top:2px;">📍 <b>Barrio:</b> ${barrioName}</div>
           <div style="margin-top: 6px; border-top: 1px solid #f3f4f6; padding-top: 4px;">
-            <span style="font-size: 10px; color: #6b7280; font-weight: 500; display: block;">Categorías:</span>
             ${categoriesBadge}
           </div>
           ${imageHtml}
@@ -218,6 +259,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
       const marker = L.marker([ann.latitude, ann.longitude]).addTo(this.map).bindPopup(popupContent);
       this.markers.push(marker);
+
       marker.on('popupopen', () => {
         setTimeout(() => {
           const btn = document.getElementById(`rate-btn-${ann.id_annotation}`);
@@ -282,12 +324,12 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         if (existing && existing.id) {
           this.voteService.update(existing.id, payload).subscribe({
             next: () => Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success'),
-            error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error'),
+            error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error')
           });
         } else {
           this.voteService.create(payload).subscribe({
             next: () => Swal.fire('Gracias', 'Tu calificación fue registrada.', 'success'),
-            error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error'),
+            error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error')
           });
         }
       });
@@ -299,7 +341,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
   onSubmit(): void {
     if (this.annotationForm.invalid) {
-      Swal.fire('Error', 'Completa los campos obligatorios', 'error');
+      Swal.fire('Formulario incompleto', 'Por favor llena la descripción y asegúrate de seleccionar el barrio correspondiente.', 'error');
       return;
     }
 
@@ -310,7 +352,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       description: formValue.description,
       latitude: Number(formValue.latitude),
       longitude: Number(formValue.longitude),
-      id_neighborhood: formValue.id_neighborhood ? Number(formValue.id_neighborhood) : null,
+      id_neighborhood: Number(formValue.id_neighborhood), // Enviamos la PK relacional numérica a la base de datos
       id_citizen: formValue.id_citizen ? Number(formValue.id_citizen) : 1,
       status: 'PENDIENTE'
     };
@@ -327,7 +369,6 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         const idAnnotation = createdAnnotation.id_annotation;
         const requests: any[] = [];
 
-        // 💡 Corregido: Ahora iteramos las llaves primarias reales de la base de datos
         const selectedCatIds = formValue.selectedCategories || [];
         selectedCatIds.forEach((idCategory: number) => {
           requests.push(
@@ -366,7 +407,6 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         const id = createdAnnotation.id_annotation;
         const selectedEntityObj = this.entitiesList.find(e => e.id_entity === Number(formValue.entities));
         
-        // 💡 Buscamos los nombres de las categorías correspondientes para guardarlos en el cache local de la vista
         const categoriesMapped = this.categories
           .filter(c => formValue.selectedCategories.includes(c.id_category))
           .map(c => ({ name: c.name }));

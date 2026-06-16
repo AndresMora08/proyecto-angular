@@ -4,22 +4,41 @@
     <p class="text-gray-600">Haz clic en el mapa para agregar una anotación en el territorio.</p>
   </header>
 
-  <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-4">
-    <select class="border rounded p-2 text-sm"><option>Comuna</option></select>
-    <select class="border rounded p-2 text-sm"><option>Barrio</option></select>
-    <select class="border rounded p-2 text-sm"><option>Categoría</option></select>
-    <button class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded text-sm font-medium border border-indigo-200">Filtros Avanzados</button>
+  <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-4 items-center">
+    
+    <select [(ngModel)]="filterCommune" (change)="applyFilters(); filterNeighborhood = ''" class="border rounded p-2 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 min-w-[160px]">
+      <option value="">Todas las Comunas</option>
+      <option *ngFor="let com of communesList" [value]="com.id_commune">{{ com.name }}</option>
+    </select>
+
+    <select [(ngModel)]="filterNeighborhood" (change)="applyFilters()" class="border rounded p-2 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 min-w-[160px]">
+      <option value="">Todos los Barrios</option>
+      <ng-container *ngFor="let barrio of neighborhoodsList">
+        <option *ngIf="!filterCommune || barrio.id_commune === +filterCommune" [value]="barrio.id_neighborhood">
+          {{ barrio.name }}
+        </option>
+      </ng-container>
+    </select>
+
+    <select [(ngModel)]="filterCategory" (change)="applyFilters()" class="border rounded p-2 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 min-w-[160px]">
+      <option value="">Todas las Categorías</option>
+      <option *ngFor="let cat of categories" [value]="cat.id_category">{{ cat.name }}</option>
+    </select>
+
+    <button (click)="clearFilters()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded text-sm font-medium transition-all border border-gray-300">
+      Limpiar Filtros
+    </button>
   </div>
 
   <div class="grid grid-cols-10 gap-6">
     
     <div class="col-span-7 space-y-4">
-      <div id="map-annotation" class="h-[500px] w-full rounded-xl border border-gray-200 shadow-inner"></div>
+      <div id="map-annotation" class="h-[520px] w-full rounded-xl border border-gray-200 shadow-inner"></div>
       
-      <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 flex justify-between items-center">
+      <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex justify-between items-center">
         <div>
-          <span class="text-xs font-bold text-blue-800 block">Información de ubicación</span>
-          <span class="text-[11px] text-blue-600">Haz clic en cualquier punto del mapa para capturar las coordenadas de la problemática de forma exacta.</span>
+          <span class="text-xs font-bold text-indigo-800 block">Información del Territorio</span>
+          <span class="text-[11px] text-indigo-600">Al interactuar y hacer clic en el mapa, recuerda seleccionar manualmente el barrio en el formulario lateral para clasificar con precisión el sector de la problemática.</span>
         </div>
       </div>
     </div>
@@ -45,6 +64,16 @@
             <label class="text-[10px] font-bold text-gray-500 block">Longitud</label>
             <input type="number" formControlName="longitude" readonly class="w-full bg-gray-50 border p-1 rounded text-xs text-gray-600 cursor-not-allowed" />
           </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="text-xs font-semibold block mb-1 text-gray-700">Barrio de la problemática *</label>
+          <select formControlName="id_neighborhood" class="w-full border p-2 rounded text-sm bg-white focus:ring-2 focus:ring-indigo-500 text-gray-700">
+            <option [value]="null" disabled selected>Selecciona el barrio...</option>
+            <option *ngFor="let b of neighborhoodsList" [value]="b.id_neighborhood">
+              {{ b.name }}
+            </option>
+          </select>
         </div>
 
         <div class="mb-4">
@@ -92,4 +121,7 @@
           <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-bold hover:bg-indigo-700 shadow-md transition-all">Guardar</button>
         </div>
       </form>
-    </div> </div> </div> ```
+    </div>
+
+  </div>
+</div>
