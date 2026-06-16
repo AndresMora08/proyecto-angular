@@ -1,4 +1,30 @@
-<div class="col-span-3 bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-fit">
+<div class="p-6 max-w-7xl mx-auto">
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Crear anotación</h1>
+    <p class="text-gray-600">Haz clic en el mapa para agregar una anotación en el territorio.</p>
+  </header>
+
+  <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex gap-4">
+    <select class="border rounded p-2 text-sm"><option>Comuna</option></select>
+    <select class="border rounded p-2 text-sm"><option>Barrio</option></select>
+    <select class="border rounded p-2 text-sm"><option>Categoría</option></select>
+    <button class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded text-sm font-medium border border-indigo-200">Filtros Avanzados</button>
+  </div>
+
+  <div class="grid grid-cols-10 gap-6">
+    
+    <div class="col-span-7 space-y-4">
+      <div id="map-annotation" class="h-[500px] w-full rounded-xl border border-gray-200 shadow-inner"></div>
+      
+      <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 flex justify-between items-center">
+        <div>
+          <span class="text-xs font-bold text-blue-800 block">Información de ubicación</span>
+          <span class="text-[11px] text-blue-600">Haz clic en cualquier punto del mapa para capturar las coordenadas de la problemática de forma exacta.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-3 bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-fit">
       <h3 class="text-sm font-bold text-gray-800 mb-4 pb-2 border-b">Detalles de la Anotación</h3>
 
       <form [formGroup]="annotationForm" (ngSubmit)="onSubmit()">
@@ -66,7 +92,6 @@
           <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-bold hover:bg-indigo-700 shadow-md transition-all">Guardar</button>
         </div>
       </form>
-    </div>
+    </div> </div> </div> ```
 
-  </div>
-</div>
+Al reemplazar por completo tu plantilla con esta estructura balanceada, los errores de etiquetas inesperadas (`NG5002`) desaparecerán instantáneamente, el mapa encontrará su contenedor idóneo y el layout se renderizará de forma limpia lado a lado.

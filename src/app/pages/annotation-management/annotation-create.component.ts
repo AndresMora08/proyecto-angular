@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AnnotationService } from '../../services/annotation/annotation.service';
@@ -9,13 +9,14 @@ import { forkJoin, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { environment } from '../../services/environments/environment';
 
+
 @Component({
   selector: 'app-annotation-create',
   templateUrl: './annotation-create.component.html',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule]
 })
-export class AnnotationCreateComponent implements OnInit {
+export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   annotationForm!: FormGroup;
   annotations: Annotation[] = []; 
   selectedFiles: File[] = [];
@@ -44,8 +45,10 @@ export class AnnotationCreateComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
-    this.initMap();
     this.loadAnnotations();
+  }
+  ngAfterViewInit(): void {
+    this.initMap();
   }
 
   private initForm(): void {
