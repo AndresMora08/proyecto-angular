@@ -12,7 +12,7 @@ import * as L from 'leaflet';
 import Swal from 'sweetalert2';
 import { Annotation } from '../../models/Annotation';
 import { forkJoin, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../services/environments/environment';
 
 @Component({
@@ -139,20 +139,45 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   }
 
   loadAnnotations(): void {
-    this.annotationService.getAll().subscribe((data: any[]) => {
+    forkJoin({
+      annotationsData: this.annotationService.getAll(),
+      votesData: this.voteService.getAll().pipe(catchError(() => of([])))
+    }).subscribe(({ annotationsData, votesData }: { annotationsData: any[]; votesData: any[] }) => {
       const localCache = JSON.parse(localStorage.getItem('annotations_metadata') || '{}');
 
-      this.annotations = data.map((item: any) => {
+      this.annotations = annotationsData.map((item: any) => {
         const id = item.id_annotation;
+        const votes = votesData.filter((vote: any) => Number(vote.id_annotation) === Number(id));
+        const validVotes = votes
+          .map((vote: any) => Number(vote.stars || vote.rating))
+          .filter((stars: number) => Number.isFinite(stars) && stars > 0);
+        const averageRating = validVotes.length
+          ? validVotes.reduce((sum: number, stars: number) => sum + stars, 0) / validVotes.length
+          : null;
+        const comments = votes
+          .map((vote: any) => String(vote.comment || '').trim())
+          .filter((comment: string) => comment.length > 0);
+
         if (id && localCache[id]) {
           return {
             ...item,
             categories: localCache[id].categories || [],
             entities_text: localCache[id].entities_text || 'Ninguna',
-            evidences: localCache[id].evidences || []
+            evidences: localCache[id].evidences || [],
+            averageRating,
+            voteCount: validVotes.length,
+            voteComments: comments
           };
         }
-        return { ...item, categories: [], entities_text: 'Ninguna', evidences: [] };
+        return {
+          ...item,
+          categories: [],
+          entities_text: 'Ninguna',
+          evidences: [],
+          averageRating,
+          voteCount: validVotes.length,
+          voteComments: comments
+        };
       });
 
       this.drawAnnotationsOnMap(this.annotations); 
@@ -190,6 +215,18 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
                      </div>`;
       }
 
+      const ratingText = (ann as any).averageRating
+        ? `${Number((ann as any).averageRating).toFixed(1)} / 5 (${(ann as any).voteCount} ${(ann as any).voteCount === 1 ? 'voto' : 'votos'})`
+        : 'Sin calificación';
+      const comments = Array.isArray((ann as any).voteComments) ? (ann as any).voteComments : [];
+      const commentsHtml = comments.length > 0
+        ? comments.slice(0, 3).map((comment: string) => `
+            <div style="margin-top:4px; background:#f9fafb; border:1px solid #eef2ff; border-radius:6px; padding:5px 6px; color:#374151; font-size:11px; line-height:1.35;">
+              ${this.escapeHtml(comment)}
+            </div>
+          `).join('')
+        : '<span style="color:#9ca3af; font-size:11px; font-style:italic;">Sin comentarios</span>';
+
       const popupContent = `
         <div style="font-family: system-ui, sans-serif; width: 220px; padding: 2px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -210,6 +247,15 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
             ${categoriesBadge}
           </div>
           ${imageHtml}
+          <div style="margin-top:8px; border-top:1px solid #f3f4f6; padding-top:6px;">
+            <div style="font-size:11px; color:#374151; margin-bottom:4px;">
+              <strong>Calificación:</strong> ${this.escapeHtml(ratingText)}
+            </div>
+            <div style="font-size:11px; color:#374151;">
+              <strong>Comentario:</strong>
+              <div style="margin-top:3px;">${commentsHtml}</div>
+            </div>
+          </div>
           <div style="margin-top:8px; display:flex; gap:6px;">
             <button id="rate-btn-${ann.id_annotation}" style="flex:1; background:#4f46e5; color:#fff; border:none; padding:6px 8px; border-radius:6px; font-size:12px; cursor:pointer;">Calificar</button>
           </div>
@@ -295,12 +341,18 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
         if (existing && existingVoteId) {
           this.voteService.update(existingVoteId, payload).subscribe({
-            next: () => Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success'),
+            next: () => {
+              Swal.fire('Actualizado', 'Tu calificación fue actualizada.', 'success');
+              this.loadAnnotations();
+            },
             error: () => Swal.fire('Error', 'No se pudo actualizar la calificación.', 'error'),
           });
         } else {
           this.voteService.create(payload).subscribe({
-            next: () => Swal.fire('Gracias', 'Tu calificación fue registrada.', 'success'),
+            next: () => {
+              Swal.fire('Gracias', 'Tu calificación fue registrada.', 'success');
+              this.loadAnnotations();
+            },
             error: () => Swal.fire('Error', 'No se pudo registrar la calificación.', 'error'),
           });
         }
