@@ -15,6 +15,8 @@ import { Annotation } from '../../models/Annotation';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../services/environments/environment';
+import { PointService } from '../../services/point/point.service';
+import { Point } from '../../models/Point';
 
 @Component({
   selector: 'app-annotation-create',
@@ -42,17 +44,21 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   private map!: L.Map;
   private currentMarker: L.Marker | null = null;
   private markers: L.Marker[] = [];
+  private neighborhoodPolygons: L.Polygon[] = [];
+  allPoints: Point[] = [];
+  
 
   constructor(
-    private fb: FormBuilder,
-    private annotationService: AnnotationService,
-    private voteService: VoteService,
-    private securityService: SecurityService,
-    private categoryService: CategoryService,
-    private entityService: EntityService,
-    private communeService: CommuneService,
-    private neighborhoodService: NeighborhoodService
-  ) {}
+  private fb: FormBuilder,
+  private annotationService: AnnotationService,
+  private voteService: VoteService,
+  private securityService: SecurityService,
+  private categoryService: CategoryService,
+  private entityService: EntityService,
+  private communeService: CommuneService,
+  private neighborhoodService: NeighborhoodService,
+  private pointService: PointService
+) {}
 
   ngOnInit(): void {
     // Solución nativa al error 404 de Leaflet utilizando iconos CDN estables
@@ -94,6 +100,9 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       const { lat, lng } = e.latlng;
       this.setFormCoordinates(lat, lng);
     });
+    if (this.allPoints.length > 0) {
+      this.drawNeighborhoodPolygons();
+    }
   }
 
   setFormCoordinates(lat: number, lng: number): void {
@@ -122,6 +131,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     forkJoin({
       coms: this.communeService.getAll().pipe(catchError(() => of([]))),
       barrios: this.neighborhoodService.getAll().pipe(catchError(() => of([]))),
+      points: this.pointService.getAll().pipe(catchError(() => of([]))),
       cats: this.categoryService.getAll().pipe(catchError(() => of([]))),
       ents: this.entityService.getAll().pipe(catchError(() => of([])))
     }).subscribe({
@@ -130,8 +140,12 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         this.neighborhoodsList = res.barrios;
         this.categories = res.cats;
         this.entitiesList = res.ents;
-        
-        // Una vez cargadas las listas maestras, traemos las anotaciones
+        this.allPoints = res.points;
+
+        if (this.map) {
+          this.drawNeighborhoodPolygons();
+        }
+
         this.loadAnnotations();
       },
       error: (err) => console.error('Error cargando catálogos iniciales:', err)
@@ -416,6 +430,42 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
           });
         }
       });
+    });
+  }
+  private drawNeighborhoodPolygons(): void {
+
+    this.neighborhoodPolygons.forEach(poly => {
+      this.map.removeLayer(poly);
+    });
+
+    this.neighborhoodPolygons = [];
+
+    this.neighborhoodsList.forEach((neighborhood: any) => {
+
+      const vertices = this.allPoints
+        .filter(p => p.id_neighborhood === neighborhood.id_neighborhood)
+        .sort((a, b) => a.order - b.order)
+        .map(p => [p.latitude, p.longitude] as [number, number]);
+
+      if (vertices.length < 3) {
+        return;
+      }
+
+      const polygon = L.polygon(vertices, {
+        color: '#4f46e5',
+        weight: 2,
+        fillColor: '#6366f1',
+        fillOpacity: 0.15
+      });
+
+      polygon.bindTooltip(neighborhood.name, {
+        permanent: false,
+        direction: 'center'
+      });
+
+      polygon.addTo(this.map);
+
+      this.neighborhoodPolygons.push(polygon);
     });
   }
 }
