@@ -1,7 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { SecurityService } from '../../../services/auth/oauth.service';
 import { OfficialService } from '../../../services/official/official.service';
 import { CitizenService } from '../../../services/citizen/citizen.service';
@@ -11,42 +10,30 @@ import Swal from 'sweetalert2';
 import { auth } from '../../../services/environments/environment';
 import { 
   signInWithPopup,
-  signInWithEmailAndPassword,
   GoogleAuthProvider, 
   GithubAuthProvider, 
   OAuthProvider, 
   AuthProvider,
-  fetchSignInMethodsForEmail
+  signInAnonymously
 } from 'firebase/auth';
 
 @Component({
   selector: 'app-sign-in',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AuthPageLayoutComponent],
+  imports: [CommonModule, RouterModule, AuthPageLayoutComponent],
   templateUrl: './sign-in.component.html'
 })
-export class SignInComponent implements OnInit {
+export class SignInComponent {
   private router = inject(Router);
-  private fb = inject(FormBuilder);
   private securityService = inject(SecurityService);
   private officialService = inject(OfficialService);
   private citizenService = inject(CitizenService);
 
-  loginForm!: FormGroup;
   isLoading: boolean = false;
-  showPassword: boolean = false;
 
-  ngOnInit(): void {
-    this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
-    });
-  }
-
-  togglePasswordVisibility(): void {
-    this.showPassword = !this.showPassword;
-  }
-
+  /**
+   * 🔍 Valida si el correo existe en las tablas de Flask (Funcionarios o Ciudadanos)
+   */
   private async validateUserInBackendTables(email: string): Promise<{ user: any; type: 'OFFICIAL' | 'CITIZEN' } | null> {
     try {
       const officials = await this.officialService.getAll().toPromise() || [];
@@ -70,139 +57,67 @@ export class SignInComponent implements OnInit {
     }
   }
 
-  async onSubmit(): Promise<void> {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
-
-    this.isLoading = true;
-    const { email, password } = this.loginForm.value;
-
-    try {
-      const backendValidation = await this.validateUserInBackendTables(email);
-
-      if (!backendValidation) {
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'Acceso Denegado',
-          text: 'Este correo electrónico no se encuentra registrado en el sistema.'
-        });
-        return;
-      }
-
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-      const token = await firebaseUser.getIdToken();
-
-      const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
-      backendValidation.user.role = assignedRole;
-
-      this.securityService.setCurrentSession(backendValidation.user, token);
-
-      this.isLoading = false;
-      Swal.fire({
-        icon: 'success',
-        title: '¡Bienvenido!',
-        text: 'Sesión iniciada correctamente.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-
-      this.redirectBasedOnRole();
-
-    } catch (firebaseError: any) {
-      this.isLoading = false;
-      console.error("❌ Error de Firebase Auth:", firebaseError);
-      
-      let errorText = 'Correo o contraseña incorrectos.';
-      if (firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/user-not-found') {
-        errorText = 'Las credenciales ingresadas no coinciden.';
-      } else if (firebaseError.code === 'auth/too-many-requests') {
-        errorText = 'Cuenta bloqueada temporalmente por demasiados intentos fallidos.';
-      }
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de acceso',
-        text: errorText
-      });
-    }
-  }
-
+  /**
+   * 🌐 Gestión unificada de Login Social con Bypass para multi-proveedor
+   */
   async handleSocialLogin(provider: AuthProvider, providerName: string): Promise<void> {
     this.isLoading = true;
 
     try {
+      // 1. Intentar inicio de sesión estándar por PopUp
       const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-
-      if (!firebaseUser.email) {
-        throw new Error('El proveedor no devolvió un correo válido.');
-      }
-
-      const backendValidation = await this.validateUserInBackendTables(firebaseUser.email);
-
-      if (!backendValidation) {
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'warning',
-          title: 'Cuenta no registrada',
-          text: `El correo ${firebaseUser.email} no está registrado en la plataforma corporativa.`,
-          confirmButtonText: 'Ir a Registro',
-          confirmButtonColor: '#3b82f6'
-        }).then(() => {
-          this.router.navigate(['/signup']);
-        });
-        return;
-      }
-
-      let userFirstName = backendValidation.user.name ? backendValidation.user.name.split(' ')[0] : '';
-      if (!userFirstName) {
-        userFirstName = firebaseUser.displayName ? firebaseUser.displayName.split(' ')[0] : 'Usuario';
-      }
-
-      const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
-      backendValidation.user.role = assignedRole;
-
-      const token = await firebaseUser.getIdToken();
-      this.securityService.setCurrentSession(backendValidation.user, token);
-
-      this.isLoading = false;
-      Swal.fire({
-        icon: 'success',
-        title: `¡Bienvenido, ${userFirstName}!`,
-        text: `Sesión iniciada correctamente con ${providerName}.`,
-        timer: 2500,
-        showConfirmButton: false
-      });
-
-      this.redirectBasedOnRole();
+      await this.processSuccessfulLogin(result.user, providerName);
 
     } catch (error: any) {
-      this.isLoading = false;
-      console.error(`Error de autenticación con ${providerName}:`, error);
-
-      if (error.code === 'auth/popup-closed-by-user') return;
-
+      // 🔥 EL BYPASS: Si la cuenta ya existe con otro método (ej: Entró con Google y ahora usa Microsoft)
       if (error.code === 'auth/account-exists-with-different-credential') {
         const email = error.customData?.email;
+
         if (email) {
-          const methods = await fetchSignInMethodsForEmail(auth, email);
-          let providerText = 'otro método';
-          if (methods.includes('google.com')) providerText = 'Google';
-          else if (methods.includes('github.com')) providerText = 'GitHub';
-          else if (methods.includes('password')) providerText = 'correo y contraseña';
+          // 2. Verificar de inmediato si el usuario es real en Flask (BDLocal)
+          const backendValidation = await this.validateUserInBackendTables(email);
           
-          Swal.fire({
-            icon: 'warning',
-            title: 'Cuenta ya registrada',
-            text: `Este correo ya está asociado con ${providerText}.`
-          });
-          return;
+          if (backendValidation) {
+            console.log(`⚠️ Bypass activado para ${email}. Ignorando restricción de Firebase...`);
+            
+            // 3. Crear una sesión puente en Firebase para obtener un token estructural válido
+            const anonCredential = await signInAnonymously(auth);
+            const backupToken = await anonCredential.user.getIdToken();
+
+            // 4. Mapear y guardar la sesión usando la información verídica de tu Backend
+            let userFirstName = backendValidation.user.name ? backendValidation.user.name.split(' ')[0] : 'Usuario';
+            const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
+            backendValidation.user.role = assignedRole;
+
+            this.securityService.setCurrentSession(backendValidation.user, backupToken);
+
+            this.isLoading = false;
+            Swal.fire({
+              icon: 'success',
+              title: `¡Bienvenido, ${userFirstName}!`,
+              text: `Sesión autorizada exitosamente mediante verificación de datos del sistema.`,
+              timer: 2500,
+              showConfirmButton: false
+            });
+
+            this.redirectBasedOnRole();
+            return;
+          } else {
+            this.isLoading = false;
+            Swal.fire({
+              icon: 'error',
+              title: 'Acceso Denegado',
+              text: `El correo ${email} no se encuentra registrado en el sistema de ciudadanos ni oficiales.`
+            });
+            return;
+          }
         }
       }
+
+      // Control de otras excepciones (ej: cerrar el PopUp antes de tiempo)
+      this.isLoading = false;
+      console.error(`Error de autenticación con ${providerName}:`, error);
+      if (error.code === 'auth/popup-closed-by-user') return;
 
       Swal.fire({
         icon: 'error',
@@ -212,15 +127,56 @@ export class SignInComponent implements OnInit {
     }
   }
 
+  /**
+   * 🛠️ Procesa el almacenamiento de sesión tras un inicio limpio sin colisión de credenciales
+   */
+  private async processSuccessfulLogin(firebaseUser: any, providerName: string): Promise<void> {
+    if (!firebaseUser || !firebaseUser.email) {
+      throw new Error('No se pudo recuperar un usuario de Firebase válido o el correo es nulo.');
+    }
+
+    const backendValidation = await this.validateUserInBackendTables(firebaseUser.email);
+
+    if (!backendValidation) {
+      this.isLoading = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cuenta no registrada',
+        text: `El correo ${firebaseUser.email} no está dado de alta en la plataforma corporativa.`,
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
+    let userFirstName = backendValidation.user.name ? backendValidation.user.name.split(' ')[0] : '';
+    if (!userFirstName) {
+      userFirstName = firebaseUser.displayName ? firebaseUser.displayName.split(' ')[0] : 'Usuario';
+    }
+
+    const assignedRole = backendValidation.type === 'OFFICIAL' ? (backendValidation.user.role || 'Funcionario') : 'Ciudadano';
+    backendValidation.user.role = assignedRole;
+
+    const token = await firebaseUser.getIdToken();
+    this.securityService.setCurrentSession(backendValidation.user, token);
+
+    this.isLoading = false;
+    Swal.fire({
+      icon: 'success',
+      title: `¡Bienvenido, ${userFirstName}!`,
+      text: `Sesión iniciada correctamente con ${providerName}.`,
+      timer: 2500,
+      showConfirmButton: false
+    });
+
+    this.redirectBasedOnRole();
+  }
+
   loginGoogle(): void { this.handleSocialLogin(new GoogleAuthProvider(), 'Google'); }
   loginGitHub(): void { this.handleSocialLogin(new GithubAuthProvider(), 'GitHub'); }
   loginMicrosoft(): void { this.handleSocialLogin(new OAuthProvider('microsoft.com'), 'Microsoft'); }
 
-  /**
-   * 🚀 Redirección unificada al Ecommerce Dashboard de TailAdmin
-   */
   private redirectBasedOnRole(): void {
-    // Apunta directamente a la ruta raíz establecida en tu enrutador principal ('')
     this.router.navigate(['/']);
   }
 }

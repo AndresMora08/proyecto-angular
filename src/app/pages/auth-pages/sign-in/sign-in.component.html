@@ -6,115 +6,55 @@
         Iniciar Sesión
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Accede de forma segura usando la infraestructura de Firebase
+        Accede de forma instantánea mediante los proveedores autorizados por el sistema
       </p>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 mb-6">
+    <div class="grid grid-cols-1 gap-4 mb-6">
       <button
         type="button"
         (click)="loginGoogle()"
         [disabled]="isLoading"
-        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50"
+        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg class="mr-2 h-4 w-4" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+        <svg class="mr-3 h-4 w-4" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
         </svg>
-        Iniciar con Google
+        Continuar con Google
       </button>
 
       <button
         type="button"
         (click)="loginMicrosoft()"
         [disabled]="isLoading"
-        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50"
+        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23">
+        <svg class="mr-3 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23">
           <path fill="#f3f3f3" d="M0 0h23v23H0z" />
           <path fill="#f35325" d="M1 1h10v10H1z" />
           <path fill="#81bc06" d="M12 1h10v10H12z" />
           <path fill="#05a6f0" d="M1 12h10v10H1z" />
           <path fill="#ffba08" d="M12 12h10v10H12z" />
         </svg>
-        Iniciar con Microsoft
+        Continuar con Microsoft
       </button>
 
       <button
         type="button"
         (click)="loginGitHub()"
         [disabled]="isLoading"
-        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50"
+        class="flex w-full items-center justify-center rounded-lg border border-slate-200 bg-white p-3 text-sm font-medium hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg class="mr-2 h-4 w-4" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+        <svg class="mr-3 h-4 w-4" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
           <path fill="currentColor" d="M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.5 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8z"></path>
         </svg>
-        Iniciar con GitHub
+        Continuar con GitHub
       </button>
     </div>
 
-    <div class="relative mb-6">
-      <div class="absolute inset-0 flex items-center">
-        <div class="w-full border-t border-gray-200 dark:border-gray-700"></div>
-      </div>
-      <div class="relative flex justify-center text-sm">
-        <span class="bg-slate-50 px-2 text-gray-500 dark:bg-slate-900">
-          O usa tus credenciales del sistema
-        </span>
-      </div>
-    </div>
-
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Correo Electrónico</label>
-        <input 
-          type="email" 
-          formControlName="email"
-          placeholder="ejemplo@dominio.com"
-          class="w-full rounded-lg border border-slate-200 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:text-white"
-          [ngClass]="{'border-red-500': loginForm.get('email')?.touched && loginForm.get('email')?.invalid}"
-        />
-        <p *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid" class="text-xs text-red-500 mt-1">
-          Por favor, introduce un correo electrónico válido.
-        </p>
-      </div>
-
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
-        <div class="relative">
-          <input 
-            [type]="showPassword ? 'text' : 'password'" 
-            formControlName="password"
-            placeholder="••••••••"
-            class="w-full rounded-lg border border-slate-200 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:text-white pr-10"
-            [ngClass]="{'border-red-500': loginForm.get('password')?.touched && loginForm.get('password')?.invalid}"
-          />
-          <button 
-            type="button" 
-            (click)="togglePasswordVisibility()"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white"
-          >
-            {{ showPassword ? '👁️' : '🙈' }}
-          </button>
-        </div>
-        <p *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid" class="text-xs text-red-500 mt-1">
-          La contraseña debe tener mínimo 6 caracteres.
-        </p>
-      </div>
-
-      <button 
-        type="submit"
-        [disabled]="loginForm.invalid || isLoading"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition shadow-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex justify-center items-center gap-2"
-      >
-        <span *ngIf="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-        {{ isLoading ? 'Autenticando...' : 'Entrar al Sistema' }}
-      </button>
-    </form>
-
-    <div class="mt-6 text-center">
-      <p class="text-sm text-gray-600 dark:text-gray-400">
-        ¿No tienes cuenta? 
-        <a routerLink="/signup" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">Regístrate aquí</a>
+    <div class="mt-8 text-center border-t border-slate-100 dark:border-slate-800 pt-4">
+      <p class="text-xs text-gray-400 dark:text-gray-500">
+        Al ingresar, confirmas poseer un perfil activo en el catálogo territorial.
       </p>
     </div>
 
