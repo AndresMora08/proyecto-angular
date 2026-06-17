@@ -87,10 +87,12 @@
                   </button>
 
                   <div
-                    class="overflow-hidden transition-all duration-300"
                     [id]="'main-' + i"
-                    [style.display]="((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) ? 'block' : 'none'"
-                    [ngStyle]="{ height: openSubmenu === 'main-' + i ? (subMenuHeights['main-' + i] || 0) + 'px' : '0px' }"
+                    class="transition-all duration-300 ease-in-out overflow-hidden"
+                    [ngClass]="{
+                      'block max-h-screen opacity-100': openSubmenu === 'main-' + i && ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)),
+                      'hidden max-h-0 opacity-0': openSubmenu !== 'main-' + i || !((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async))
+                    }"
                   >
                     <ul class="mt-1 space-y-1 pl-9 border-l border-gray-100 dark:border-gray-800 ml-6">
                       @for (subItem of nav.subItems; track $index) {
