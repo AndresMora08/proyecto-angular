@@ -1,21 +1,47 @@
-import { Component } from '@angular/core';
-import { EcommerceMetricsComponent } from '../../../shared/components/ecommerce/ecommerce-metrics/ecommerce-metrics.component';
-import { MonthlySalesChartComponent } from '../../../shared/components/ecommerce/monthly-sales-chart/monthly-sales-chart.component';
-import { MonthlyTargetComponent } from '../../../shared/components/ecommerce/monthly-target/monthly-target.component';
-import { StatisticsChartComponent } from '../../../shared/components/ecommerce/statics-chart/statics-chart.component';
-import { DemographicCardComponent } from '../../../shared/components/ecommerce/demographic-card/demographic-card.component';
-import { RecentOrdersComponent } from '../../../shared/components/ecommerce/recent-orders/recent-orders.component';
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { SecurityService } from '../../../services/auth/oauth.service';
 
 @Component({
   selector: 'app-ecommerce',
-  imports: [
-    EcommerceMetricsComponent,
-    MonthlySalesChartComponent,
-    MonthlyTargetComponent,
-    StatisticsChartComponent,
-    DemographicCardComponent,
-    RecentOrdersComponent,
-  ],
-  templateUrl: './ecommerce.component.html',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  templateUrl: './ecommerce.component.html'
 })
-export class EcommerceComponent {}
+export class EcommerceComponent implements OnInit, OnDestroy {
+  private securityService = inject(SecurityService);
+  private authSubscription!: Subscription;
+
+  currentUser: any = null;
+  userName: string = 'Usuario';
+  userRoleLabel: string = '';
+  isOfficial: boolean = false;
+  isAdmin: boolean = false;
+
+  ngOnInit(): void {
+    // Escuchamos reactivamente al usuario para pintar la interfaz
+    this.authSubscription = this.securityService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      if (user) {
+        this.userName = user.name ? user.name.split(' ')[0] : 'Usuario';
+        this.isOfficial = !!user.id_official;
+        
+        const role = user.role ? user.role.toUpperCase() : '';
+        this.isAdmin = this.isOfficial && (role === 'ADMINISTRADOR' || role === 'ADMIN');
+
+        // Determinar etiqueta visual
+        if (this.isAdmin) this.userRoleLabel = 'Administrador del Sistema';
+        else if (this.isOfficial) this.userRoleLabel = 'Funcionario Operativo';
+        else this.userRoleLabel = 'Ciudadano';
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+    }
+  }
+}

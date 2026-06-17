@@ -1,23 +1,91 @@
-<div class="grid grid-cols-12 gap-4 md:gap-6">
-  <div class="col-span-12 space-y-6 xl:col-span-7">
-    <div><app-ecommerce-metrics /></div>
-
-    <div><app-monthly-sales-chart /></div>
+<div class="space-y-6 max-w-7xl mx-auto p-2">
+  
+  <div class="relative overflow-hidden bg-gradient-to-r from-brand-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white shadow-md">
+    <div class="relative z-10 max-w-2xl">
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-sm text-white mb-3 uppercase tracking-wider">
+        {{ userRoleLabel || 'Panel de Control' }}
+      </span>
+      <h1 class="text-2xl md:text-4xl font-bold tracking-tight mb-2">
+        ¡Hola, {{ userName }}!
+      </h1>
+      <p class="text-white/80 text-sm md:text-base leading-relaxed">
+        Bienvenido a la plataforma de Gestión Territorial y Atenciones Ciudadanas. Desde aquí puedes supervisar el sistema o interactuar con las solicitudes activas.
+      </p>
+    </div>
+    <div class="absolute right-0 bottom-0 top-0 w-1/3 hidden md:block opacity-10 pointer-events-none">
+      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M0,100 C30,40 70,60 100,0 L100,100 Z" fill="currentColor"></path>
+      </svg>
+    </div>
   </div>
 
-  <div class="col-span-12 xl:col-span-5">
-    <app-monthly-target />
-  </div>
+  <div>
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Módulos y Acciones Rápidas</h2>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      
+      <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+          </div>
+          <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Anotaciones y Reportes</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Registra incidencias, comentarios o solicitudes civiles directo en el mapa territorial.</p>
+        </div>
+        <a routerLink="/annotation-create" class="inline-flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+          Ir al formulario <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
 
-  <div class="col-span-12">
-    <app-statics-chart />
-  </div>
+      @if (isOfficial) {
+        <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            </div>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Mapas y Rastreo GPS</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Visualiza perímetros de barrios, comunas y monitorea la localización GPS del personal en tiempo real.</p>
+          </div>
+          <a routerLink="/territorial-map" class="inline-flex items-center text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            Ver mapas geográficos <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
 
-  <div class="col-span-12 xl:col-span-5">
-    <app-demographic-card />
-  </div>
+        <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Módulo de Analítica</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Accede a las métricas corporativas consolidando estados y flujos de rendimiento.</p>
+          </div>
+          <a routerLink="/reports" class="inline-flex items-center text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline">
+            Generar reportes <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      }
 
-  <div class="col-span-12 xl:col-span-7">
-    <app-recent-orders/>
+      @if (isAdmin) {
+        <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-indigo-100 dark:border-indigo-950 bg-gradient-to-br from-white to-indigo-50/20 dark:from-gray-900 dark:to-indigo-950/10 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between sm:col-span-2 lg:col-span-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-gray-800 dark:text-gray-200">Panel de Configuración del Sistema</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tienes privilegios de administración totales sobre los catálogos relacionales maestros (CU-01 a CU-06).</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              <a routerLink="/staff" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-md transition-colors">Funcionarios</a>
+              <a routerLink="/categories" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md transition-colors">Categorías</a>
+              <a routerLink="/entities" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-md transition-colors">Entidades</a>
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>
   </div>
 </div>
