@@ -5,6 +5,7 @@ import { SecurityService } from '../../../services/auth/oauth.service';
 import { OfficialService } from '../../../services/official/official.service';
 import { CitizenService } from '../../../services/citizen/citizen.service';
 import { AuthPageLayoutComponent } from '../../../shared/layout/auth-page-layout/auth-page-layout.component';
+import { LoggerService } from '../../../shared/services/logger.service';
 import Swal from 'sweetalert2';
 
 import { auth } from '../../../services/environments/environment';
@@ -28,6 +29,7 @@ export class SignInComponent {
   private securityService = inject(SecurityService);
   private officialService = inject(OfficialService);
   private citizenService = inject(CitizenService);
+  private logger = inject(LoggerService);
 
   isLoading: boolean = false;
 

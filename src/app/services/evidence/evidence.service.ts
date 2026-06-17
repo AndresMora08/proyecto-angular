@@ -35,6 +35,14 @@ export class EvidenceService {
     return this.http.post<Evidence>(this.url, this.toFormData(evidence));
   }
 
+  uploadAnnotationEvidence(idAnnotation: number, file: File): Observable<Evidence> {
+    const formData = new FormData();
+    formData.append('id_annotation', String(idAnnotation));
+    formData.append('file', file);
+
+    return this.http.post<Evidence>(this.url, formData);
+  }
+
   update(id: number, evidence: Evidence): Observable<Evidence> {
     return this.http.put<Evidence>(`${this.url}/${id}`, this.toFormData(evidence));
   }

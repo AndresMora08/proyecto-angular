@@ -32,9 +32,5 @@ export class SigninFormComponent {
     this.showPassword = !this.showPassword;
   }
 
-  onSignIn() {
-    console.log('Email:', this.email);
-    console.log('Password:', this.password);
-    console.log('Remember Me:', this.isChecked);
-  }
+  onSignIn() {}
 }

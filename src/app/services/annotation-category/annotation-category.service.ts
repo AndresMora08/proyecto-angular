@@ -32,6 +32,10 @@ export class AnnotationCategoryService {
     return this.http.post<AnnotationCategory>(this.url, annotationCategory);
   }
 
+  createRelation(annotationCategory: AnnotationCategory): Observable<AnnotationCategory> {
+    return this.create(annotationCategory);
+  }
+
   update(id: number, annotationCategory: AnnotationCategory): Observable<AnnotationCategory> {
     return this.http.put<AnnotationCategory>(`${this.url}/${id}`, annotationCategory);
   }

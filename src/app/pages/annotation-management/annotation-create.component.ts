@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { AnnotationService } from '../../services/annotation/annotation.service';
 import { VoteService } from '../../services/vote/vote.service';
-import { SecurityService } from '../../services/auth/oauth.service';
+import { AnnotationCategoryService } from '../../services/annotation-category/annotation-category.service';
 import { CategoryService } from '../../services/category/category.service';
 import { EntityService } from '../../services/entity/entity.service';
 import { CommuneService } from '../../services/commune/commune.service';
@@ -14,13 +14,14 @@ import Swal from 'sweetalert2';
 import { Annotation } from '../../models/Annotation';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-import { environment } from '../../services/environments/environment';
+import { EvidenceService } from '../../services/evidence/evidence.service';
 import { PointService } from '../../services/point/point.service';
 import { Point } from '../../models/Point';
 
 @Component({
   selector: 'app-annotation-create',
   templateUrl: './annotation-create.component.html',
+  styleUrls: ['./annotation-create.component.css'],
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule]
 })
@@ -55,9 +56,10 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   private fb: FormBuilder,
   private annotationService: AnnotationService,
   private voteService: VoteService,
-  private securityService: SecurityService,
+  private annotationCategoryService: AnnotationCategoryService,
   private categoryService: CategoryService,
   private entityService: EntityService,
+  private evidenceService: EvidenceService,
   private communeService: CommuneService,
   private neighborhoodService: NeighborhoodService,
   private pointService: PointService
@@ -208,7 +210,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       annotationsData: this.annotationService.getAll(),
       votesData: this.voteService.getAll().pipe(catchError(() => of([]))),
       // Consumo real de la tabla pivote de relaciones en el Backend
-      allPivotCategories: this.annotationService['http'].get<any[]>(`${environment.apiUrl}/annotation-categories`).pipe(catchError(() => of([])))
+      allPivotCategories: this.annotationCategoryService.getAll().pipe(catchError(() => of([])))
     }).subscribe({
       next: ({ annotationsData, votesData, allPivotCategories }) => {
         this.annotations = annotationsData.map((item: any) => {
@@ -261,23 +263,23 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
       const marker = L.marker([ann.latitude, ann.longitude]).addTo(this.map);
       
       let popupContent = `
-        <div style="font-family: sans-serif; min-w-[200px]">
-          <h4 style="margin:0 0 5px; color:#1e1b4b; font-size:14px;">Anotación #${ann.id_annotation}</h4>
-          <p style="margin:0 0 8px; font-size:12px; color:#374151;">${ann.description}</p>
-          <div style="margin-bottom:6px;">
+        <div class="annotation-popup">
+          <h4>Anotación #${ann.id_annotation}</h4>
+          <p>${ann.description}</p>
+          <div class="annotation-popup__categories">
       `;
 
       if (ann.categories && ann.categories.length > 0) {
-        popupContent += `<span style="font-size:10px; font-weight:bold; color:#4f46e5; block">Categorías:</span> `;
+        popupContent += `<span class="annotation-popup__label">Categorías:</span> `;
         ann.categories.forEach((c: any) => {
-          popupContent += `<span style="display:inline-block; background:#eef2ff; color:#4f46e5; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:4px;">${c.name}</span>`;
+          popupContent += `<span class="annotation-popup__tag">${c.name}</span>`;
         });
       }
 
       popupContent += `
           </div>
-          <div style="margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; display:flex; justify-content:space-between;">
-            <button id="btn-rate-${ann.id_annotation}" style="background:#4f46e5; color:white; border:none; padding:4px 8px; font-size:11px; border-radius:4px; cursor:pointer;">Calificar</button>
+          <div class="annotation-popup__actions">
+            <button id="btn-rate-${ann.id_annotation}" class="annotation-popup__button">Calificar</button>
           </div>
         </div>
       `;
@@ -376,7 +378,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         const selectedCats: number[] = formValue.selectedCategories || [];
         selectedCats.forEach(catId => {
           requests.push(
-            this.annotationService['http'].post(`${environment.apiUrl}/annotation-categories`, {
+            this.annotationCategoryService.createRelation({
               id_annotation: idAnnotation,
               id_category: catId
             })
@@ -386,7 +388,7 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
         // 2. Guardar Entidades vinculadas en Backend Real
         if (formValue.entities) {
           requests.push(
-            this.annotationService['http'].post(`${environment.apiUrl}/annotation-entities`, {
+            this.annotationService.createEntityRelation({
               id_annotation: idAnnotation,
               id_entity: Number(formValue.entities)
             })
@@ -395,11 +397,8 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
         // 3. Guardar Evidencias si existen
         if (this.selectedFiles.length > 0) {
-          const fd = new FormData();
-          fd.append('id_annotation', String(idAnnotation));
-          fd.append('file', this.selectedFiles[0]);
           requests.push(
-            this.annotationService['http'].post(`${environment.apiUrl}/evidences`, fd)
+            this.evidenceService.uploadAnnotationEvidence(idAnnotation, this.selectedFiles[0])
           );
         }
 

@@ -4,9 +4,15 @@ import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import { Annotation } from '../../models/Annotation';
 
+export interface AnnotationEntityPayload {
+  id_annotation: number;
+  id_entity: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AnnotationService {
   private url = `${environment.apiUrl}/annotations`;
+  private annotationEntitiesUrl = `${environment.apiUrl}/annotation-entities`;
 
   constructor(private http: HttpClient) {}
 
@@ -33,6 +39,10 @@ export class AnnotationService {
 
   create(annotation: Annotation): Observable<Annotation> {
     return this.http.post<Annotation>(this.url, annotation);
+  }
+
+  createEntityRelation(payload: AnnotationEntityPayload): Observable<AnnotationEntityPayload> {
+    return this.http.post<AnnotationEntityPayload>(this.annotationEntitiesUrl, payload);
   }
 
   update(id_annotation: number, annotation: Annotation): Observable<Annotation> {

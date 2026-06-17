@@ -20,7 +20,7 @@ import { Neighborhood } from '../../models/Neighborhood';
 type CategoryNode = Category & {
   id: number;
   parentId: number | null;
-  color: string;
+  markerClass: string;
   count: number;
   expanded: boolean;
   children: CategoryNode[];
@@ -66,7 +66,16 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
   private map: L.Map | null = null;
   private markers: L.Marker[] = [];
   private sub = new Subscription();
-  private readonly palette = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea580c', '#0891b2', '#4f46e5', '#be123c'];
+  private readonly markerClassNames = [
+    'territorial-marker--blue',
+    'territorial-marker--green',
+    'territorial-marker--red',
+    'territorial-marker--purple',
+    'territorial-marker--orange',
+    'territorial-marker--cyan',
+    'territorial-marker--indigo',
+    'territorial-marker--rose'
+  ];
 
   constructor(
     private annotationService: AnnotationService,
@@ -239,15 +248,15 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
     this.filteredAnnotations.forEach(annotation => {
       if (!Number.isFinite(Number(annotation.latitude)) || !Number.isFinite(Number(annotation.longitude))) return;
 
-      const color = this.getAnnotationColor(annotation);
+      const markerClass = this.getAnnotationMarkerClass(annotation);
       const marker = L.marker([Number(annotation.latitude), Number(annotation.longitude)], {
         icon: L.divIcon({
-          className: 'territorial-marker',
-          html: `<span style="background:${color};"></span>`,
+          className: `territorial-marker ${markerClass}`,
+          html: '<span></span>',
           iconSize: [22, 22],
           iconAnchor: [11, 11]
         })
-      }).addTo(this.map!).bindPopup(this.buildPopup(annotation, color), { maxWidth: 320 });
+      }).addTo(this.map!).bindPopup(this.buildPopup(annotation, markerClass), { maxWidth: 320 });
 
       this.markers.push(marker);
     });
@@ -266,7 +275,7 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
           ...category,
           id,
           parentId: this.normalizeParentId(category.id_parent_category),
-          color: this.palette[index % this.palette.length],
+          markerClass: this.markerClassNames[index % this.markerClassNames.length],
           count: 0,
           expanded: true,
           children: []
@@ -383,7 +392,7 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
     this.categoryTree.forEach(assignCounts);
   }
 
-  private buildPopup(annotation: MapAnnotation, color: string): string {
+  private buildPopup(annotation: MapAnnotation, markerClass: string): string {
     const categories = annotation.categoryNames.length ? annotation.categoryNames.join(', ') : 'Sin categoria';
     const subcategories = annotation.subcategoryNames.length ? annotation.subcategoryNames.join(', ') : 'Sin subcategoria';
     const rating = annotation.averageRating ? `${annotation.averageRating.toFixed(1)} / 5 (${annotation.voteCount})` : 'Sin calificaciones';
@@ -394,7 +403,7 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
     return `
       <div class="territorial-popup">
         <div class="territorial-popup-header">
-          <span style="background:${color};"></span>
+          <span class="${markerClass}"></span>
           <strong>${this.escapeHtml(annotation.status || 'Registrada')}</strong>
         </div>
         <p>${this.escapeHtml(annotation.description || 'Sin descripcion')}</p>
@@ -410,13 +419,13 @@ export class TerritorialMapComponent implements OnInit, AfterViewInit, OnDestroy
     `;
   }
 
-  private getAnnotationColor(annotation: MapAnnotation): string {
+  private getAnnotationMarkerClass(annotation: MapAnnotation): string {
     const firstCategory = annotation.categoryIds[0];
     const node = firstCategory ? this.findNode(firstCategory) : null;
-    if (node) return node.color;
+    if (node) return node.markerClass;
 
     const parent = this.categoryTree.find(root => annotation.categoryNames.includes(root.name));
-    return parent?.color || '#475467';
+    return parent?.markerClass || 'territorial-marker--default';
   }
 
   private findNode(id: number): CategoryNode | null {

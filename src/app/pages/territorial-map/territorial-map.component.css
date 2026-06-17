@@ -84,3 +84,57 @@
   color: #98a2b3;
   font-size: 12px;
 }
+
+:host .territorial-category-dot.territorial-marker--blue,
+:host ::ng-deep .territorial-marker--blue span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--blue {
+  background: #2563eb;
+}
+
+:host .territorial-category-dot.territorial-marker--green,
+:host ::ng-deep .territorial-marker--green span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--green {
+  background: #16a34a;
+}
+
+:host .territorial-category-dot.territorial-marker--red,
+:host ::ng-deep .territorial-marker--red span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--red {
+  background: #dc2626;
+}
+
+:host .territorial-category-dot.territorial-marker--purple,
+:host ::ng-deep .territorial-marker--purple span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--purple {
+  background: #9333ea;
+}
+
+:host .territorial-category-dot.territorial-marker--orange,
+:host ::ng-deep .territorial-marker--orange span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--orange {
+  background: #ea580c;
+}
+
+:host .territorial-category-dot.territorial-marker--cyan,
+:host ::ng-deep .territorial-marker--cyan span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--cyan {
+  background: #0891b2;
+}
+
+:host .territorial-category-dot.territorial-marker--indigo,
+:host ::ng-deep .territorial-marker--indigo span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--indigo {
+  background: #4f46e5;
+}
+
+:host .territorial-category-dot.territorial-marker--rose,
+:host ::ng-deep .territorial-marker--rose span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--rose {
+  background: #be123c;
+}
+
+:host .territorial-category-dot.territorial-marker--default,
+:host ::ng-deep .territorial-marker--default span,
+:host ::ng-deep .territorial-popup-header .territorial-marker--default {
+  background: #475467;
+}
