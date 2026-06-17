@@ -68,16 +68,6 @@
         </div>
 
         <div class="mb-4">
-          <label class="text-xs font-semibold block mb-1 text-gray-700">Barrio de la problemática *</label>
-          <select formControlName="id_neighborhood" class="w-full border p-2 rounded text-sm bg-white focus:ring-2 focus:ring-indigo-500 text-gray-700">
-            <option [value]="null" disabled selected>Selecciona el barrio...</option>
-            <option *ngFor="let b of neighborhoodsList" [value]="b.id_neighborhood">
-              {{ b.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="mb-4">
           <label class="text-xs font-semibold block mb-2 text-gray-700">Categorías de la problemática</label>
           <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
             <button

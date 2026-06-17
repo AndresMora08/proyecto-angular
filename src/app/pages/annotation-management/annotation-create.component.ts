@@ -44,7 +44,10 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   private map!: L.Map;
   private currentMarker: L.Marker | null = null;
   private markers: L.Marker[] = [];
-  private neighborhoodPolygons: L.Polygon[] = [];
+  private neighborhoodPolygons: {
+    polygon: L.Polygon;
+    neighborhoodId: number;
+  }[] = [];
   allPoints: Point[] = [];
   
 
@@ -97,7 +100,27 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     }).addTo(this.map);
 
     this.map.on('click', (e: L.LeafletMouseEvent) => {
+
       const { lat, lng } = e.latlng;
+
+      const neighborhoodId =
+        this.findNeighborhoodByPoint(lat, lng);
+
+      if (!neighborhoodId) {
+
+        Swal.fire(
+          'Ubicación inválida',
+          'La anotación debe estar dentro de un barrio demarcado.',
+          'warning'
+        );
+
+        return;
+      }
+
+      this.annotationForm.patchValue({
+        id_neighborhood: neighborhoodId
+      });
+
       this.setFormCoordinates(lat, lng);
     });
     if (this.allPoints.length > 0) {
@@ -112,8 +135,36 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
     } else {
       this.currentMarker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
       this.currentMarker.on('dragend', () => {
+
         const position = this.currentMarker!.getLatLng();
-        this.annotationForm.patchValue({ latitude: position.lat, longitude: position.lng });
+
+        const neighborhoodId =
+          this.findNeighborhoodByPoint(
+            position.lat,
+            position.lng
+          );
+
+        if (!neighborhoodId) {
+
+          Swal.fire(
+            'Ubicación inválida',
+            'La anotación debe permanecer dentro de un barrio.',
+            'warning'
+          );
+
+          this.currentMarker!.setLatLng([
+            this.annotationForm.value.latitude,
+            this.annotationForm.value.longitude
+          ]);
+
+          return;
+        }
+
+        this.annotationForm.patchValue({
+          latitude: position.lat,
+          longitude: position.lng,
+          id_neighborhood: neighborhoodId
+        });
       });
     }
   }
@@ -434,8 +485,8 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
   }
   private drawNeighborhoodPolygons(): void {
 
-    this.neighborhoodPolygons.forEach(poly => {
-      this.map.removeLayer(poly);
+this.neighborhoodPolygons.forEach(item => {
+      this.map.removeLayer(item.polygon);
     });
 
     this.neighborhoodPolygons = [];
@@ -465,7 +516,66 @@ export class AnnotationCreateComponent implements OnInit, AfterViewInit {
 
       polygon.addTo(this.map);
 
-      this.neighborhoodPolygons.push(polygon);
+      this.neighborhoodPolygons.push({
+        polygon,
+        neighborhoodId: neighborhood.id_neighborhood
+      });
     });
+  }
+  private findNeighborhoodByPoint(
+    lat: number,
+    lng: number
+  ): number | null {
+
+    const point = L.latLng(lat, lng);
+
+    for (const item of this.neighborhoodPolygons) {
+
+      const polygon = item.polygon;
+
+      const latlngs = polygon.getLatLngs()[0] as L.LatLng[];
+
+      if (this.isPointInsidePolygon(point, latlngs)) {
+        return item.neighborhoodId;
+      }
+    }
+
+    return null;
+  }
+  
+  private isPointInsidePolygon(
+    point: L.LatLng,
+    polygon: L.LatLng[]
+  ): boolean {
+
+    let inside = false;
+
+    for (
+      let i = 0, j = polygon.length - 1;
+      i < polygon.length;
+      j = i++
+    ) {
+
+      const xi = polygon[i].lng;
+      const yi = polygon[i].lat;
+
+      const xj = polygon[j].lng;
+      const yj = polygon[j].lat;
+
+      const intersect =
+        ((yi > point.lat) !== (yj > point.lat)) &&
+        (
+          point.lng <
+          ((xj - xi) * (point.lat - yi)) /
+          (yj - yi) +
+          xi
+        );
+
+      if (intersect) {
+        inside = !inside;
+      }
+    }
+
+    return inside;
   }
 }
